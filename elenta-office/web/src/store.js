@@ -69,7 +69,6 @@ export function presence() {
         break;
       case 'waiting_approval':
         set(lead, 'waiting');
-        for (const p of pieces) set(p.agent, 'waiting');
         break;
       case 'failed':
         if (now - Date.parse(job.updatedAt || 0) < 120000) set(lead, 'error');

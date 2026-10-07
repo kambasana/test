@@ -27,5 +27,6 @@ commercial use without permission.
 | Date | Step | Who | Notes |
 |---|---|---|---|
 | 2026-10-07 | Spec written | reviewing session | SPEC.md v1 |
+| 2026-10-07 | Backend implemented | backend implementation agent | Built server/ (Node 22 built-ins only: settings, org validation, library index + lessons, job engine with persisted states, ACP runner spawning claude-agent-acp with terminal:false, a tools whitelist, settingSources [] and a client-side permission policy, fs handlers with realpath containment, audit log, HTTP API + SSE with Host/Origin/JSON/size guards and CSP, wings, floor layout), orgs/elenta.json, 10 library notes, docker/ (sbx script + hardened compose), test/ (39 node:test unit tests, live run passed against real Claude) and README.md. Sources used: SPEC.md, Node.js docs, ACP docs and the installed Apache-2.0 adapter package in node_modules. The rules were followed: nothing under the excluded paths was opened, and there were no searches for the excluded product or author. docs.docker.com was blocked by the network proxy, so the sbx sub-command names were written from general knowledge and need checking against `sbx --help`. |
 
 This record is not legal advice. Have a lawyer review it before commercial use.

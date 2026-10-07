@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Elenta Office</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Cpath d=%27M16 2l12 7v14l-12 7-12-7V9z%27 fill=%27%232DD4BF%27/%3E%3Cpath d=%27M16 9l6 3.5v7L16 23l-6-3.5v-7z%27 fill=%27%230E1116%27/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#c-text">Skip to the composer</a>
+  <header id="topbar" class="topbar"></header>
+  <main class="layout">
+    <nav id="rail" class="rail" aria-label="Organisation"></nav>
+    <section id="floor" class="floor" aria-label="Office floor">
+      <div id="floor-stage" class="floor-stage"></div>
+      <div class="floor-vignette" aria-hidden="true"></div>
+      <div id="floor-crumb" class="floor-crumb"></div>
+      <div class="floor-legend" aria-label="Status rings">
+        <span class="legend-item"><span class="ring tone-live" aria-hidden="true"></span>Working</span>
+        <span class="legend-item"><span class="ring tone-waiting" aria-hidden="true"></span>Waiting for approval</span>
+        <span class="legend-item"><span class="ring tone-error" aria-hidden="true"></span>Refused / error</span>
+        <span class="legend-item"><span class="ring tone-idle" aria-hidden="true"></span>Idle</span>
+      </div>
+      <div class="floor-zoom" role="group" aria-label="Zoom">
+        <button type="button" id="zoom-in" class="btn btn-ghost icon-btn" aria-label="Zoom in">+</button>
+        <button type="button" id="zoom-out" class="btn btn-ghost icon-btn" aria-label="Zoom out">&minus;</button>
+        <button type="button" id="zoom-fit" class="btn btn-ghost" aria-label="Show the whole floor">Fit</button>
+      </div>
+    </section>
+    <aside id="work" class="work" aria-label="Work"></aside>
+  </main>
+  <div id="scrim" class="scrim" aria-hidden="true"></div>
+  <div id="live" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+</body>
+</html>

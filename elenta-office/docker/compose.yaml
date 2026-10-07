@@ -1,0 +1,91 @@
+# Hardened fallback for running Elenta Office in Docker when Docker Sandboxes (sbx) is not available.
+#
+#   docker compose -f docker/compose.yaml up
+#
+# Layout:
+#   office  - the app; non-root, read-only root fs, no capabilities, only on the internal network.
+#             Its only way out is the egress proxy, which allows the Claude hosts and nothing else.
+#   egress  - forward proxy with a host allowlist (docker/egress/squid.conf).
+#   front   - publishes the office to 127.0.0.1 on the host (an internal network cannot publish ports).
+#
+# Before the first run, install dependencies on the host (`npm ci --omit=dev`) and give the agent
+# a Claude login through the environment file docker/claude.env, for example
+#   CLAUDE_CODE_OAUTH_TOKEN=...   (from `claude setup-token`)
+# The office code never reads this value; only the Claude Code process started by the adapter does.
+
+name: elenta-office
+
+x-hardening: &hardening
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: ["no-new-privileges:true"]
+  restart: unless-stopped
+  pids_limit: 256
+
+services:
+  office:
+    <<: *hardening
+    image: node:22-bookworm-slim
+    user: "1000:1000"
+    working_dir: /office
+    command: ["node", "server/main.mjs"]
+    environment:
+      EO_HOST: "0.0.0.0"
+      EO_PORT: "4180"
+      EO_DATA: /state/data
+      EO_WORK: /state/work
+      EO_DELIVERABLES: /state/deliverables
+      EO_SETTINGS: /state/settings.local.json
+      EO_LIBRARY: /library
+      HOME: /home/office
+      HTTPS_PROXY: http://egress:3128
+      HTTP_PROXY: http://egress:3128
+      NO_PROXY: localhost,127.0.0.1
+    env_file:
+      - path: ./claude.env
+        required: false
+    volumes:
+      - ..:/office:ro
+      - ../library:/library:rw
+      - office-state:/state:rw
+      - office-home:/home/office:rw
+    tmpfs:
+      - /tmp:size=64m,mode=1777
+    networks: [internal]
+    mem_limit: 2g
+
+  egress:
+    <<: *hardening
+    image: ubuntu/squid:6.6-24.04_beta
+    volumes:
+      - ./egress/squid.conf:/etc/squid/squid.conf:ro
+    tmpfs:
+      - /var/spool/squid:size=64m
+      - /var/log/squid:size=16m
+      - /run:size=8m
+    cap_add: [SETUID, SETGID]
+    networks: [internal, outside]
+
+  front:
+    <<: *hardening
+    image: nginx:1.27-alpine
+    volumes:
+      - ./front/nginx.conf:/etc/nginx/nginx.conf:ro
+    tmpfs:
+      - /var/cache/nginx:size=16m
+      - /run:size=8m
+      - /tmp:size=16m
+    cap_add: [SETUID, SETGID, NET_BIND_SERVICE, CHOWN]
+    ports:
+      - "127.0.0.1:4180:4180"
+    networks: [internal, outside]
+    depends_on: [office]
+
+networks:
+  internal:
+    internal: true
+  outside: {}
+
+volumes:
+  office-state: {}
+  office-home: {}

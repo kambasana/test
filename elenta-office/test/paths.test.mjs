@@ -22,7 +22,7 @@ test('paths inside the root resolve, including files that do not exist yet', () 
 test('"..", NUL and absolute paths elsewhere are refused', () => {
   assert.throws(() => containedPath(root, '../x'));
   assert.throws(() => containedPath(root, 'out/../../x'));
-  assert.throws(() => containedPath(root, join(root, 'out', '..', 'out', 'ok.md')), /"\.\."/);
+  assert.throws(() => containedPath(root, root + '/out/../out/ok.md'), /"\.\."/);
   assert.throws(() => containedPath(root, 'out/a\0b'));
   assert.throws(() => containedPath(root, '/etc/passwd'));
   assert.throws(() => containedPath(root, ''));

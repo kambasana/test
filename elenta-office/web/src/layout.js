@@ -75,10 +75,11 @@ export function computeLayout(org) {
 
   const ringDepts = org.departments.filter((d) => !d.boss);
   const N = ringDepts.length;
-  const step = N ? (2 * Math.PI) / N : 0;
-  // Keep one gap of the ring centred on "screen up": the Library sits there.
+  // The ring has N + 1 slots; the slot at "screen up" is left free for the
+  // Library, which sits closer in, beside Command.
+  const step = (2 * Math.PI) / (N + 1);
   const libAngle = SCREEN_UP;
-  const firstAngle = libAngle + step / 2;
+  const firstAngle = libAngle + step;
 
   const bays = ringDepts.map((d, i) => {
     const angle = firstAngle + i * step;
@@ -90,7 +91,7 @@ export function computeLayout(org) {
   });
 
   const library = { id: 'library', kind: 'library', R: 1.7, angle: libAngle };
-  const libDist = hub.R + library.R + 0.7;
+  const libDist = hub.R + library.R + GAP + 0.15;
   library.x = Math.cos(libAngle) * libDist;
   library.z = Math.sin(libAngle) * libDist;
 

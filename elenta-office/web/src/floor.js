@@ -6,7 +6,7 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { h, clear } from './dom.js';
+import { h, clear, put } from './dom.js';
 import { STATUS } from './constants.js';
 
 const COS30 = Math.cos(Math.PI / 6);
@@ -389,7 +389,9 @@ export function createFloor(container, hooks = {}) {
         h('span', { class: 'lbl-name' }, name), off ? h('span', { class: 'lbl-chip' }, 'OFF') : null, meta);
       el.addEventListener('click', (e) => { e.stopPropagation(); if (hooks.onSelect) hooks.onSelect({ dept: key, kind }); });
       const rIn = R * COS30;
-      addLabel('dept', el, new THREE.Vector3(x + front.x * rIn, 0, z + front.z * rIn), { dept: key });
+      const above = kind === 'library';
+      const dir = above ? -1 : 1;
+      addLabel(above ? 'above' : 'dept', el, new THREE.Vector3(x + dir * front.x * rIn, above ? 0.6 : 0, z + dir * front.z * rIn), { dept: key });
       model.deptLabels.set(key, { el, meta, name });
     };
     if (org.boss) mkDeptLabel(org.boss.key, 'COMMAND', org.boss.color, `${org.boss.name} · ${1 + org.boss.teams.reduce((a, t) => a + t.people.length, 0)}`, 0, 0, hub.R, false, 'command');
@@ -596,7 +598,7 @@ export function createFloor(container, hooks = {}) {
       const info = model.org.people.get(hit.person);
       const st = presence.get(hit.person) || 'idle';
       clear(tip);
-      tip.append(
+      put(tip, 
         h('strong', null, info.person.name),
         h('span', { class: 'tip-sub' }, [info.team ? info.team.name : (info.person.isLead ? `${info.dept.name} LEAD` : info.dept.name)].join('')),
         info.person.role ? h('span', { class: 'tip-role' }, info.person.role) : null,
@@ -761,7 +763,7 @@ export function createFloor(container, hooks = {}) {
       if (x < -200 || x > w + 200 || y < -100 || y > hh + 100) show = false;
       if (show !== l.shown) { l.el.classList.toggle('is-hidden', !show); l.shown = show; }
       if (show && (x !== l.x || y !== l.y)) {
-        l.el.style.transform = `translate(${x}px, ${y}px)`;
+        l.el.style.transform = `translate(${x}px, ${y}px) ${l.kind === 'team' || l.kind === 'above' ? 'translate(-50%, calc(-100% - 6px))' : 'translate(-50%, 10px)'}`;
         l.x = x; l.y = y;
       }
     }

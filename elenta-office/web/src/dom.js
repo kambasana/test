@@ -60,3 +60,8 @@ export function announce(text) {
   live.textContent = '';
   announceTimer = setTimeout(() => { live.textContent = String(text); }, 60);
 }
+
+// Like Element.append, but skips null / undefined / false children.
+export function put(el, ...children) {
+  return append(el, children);
+}

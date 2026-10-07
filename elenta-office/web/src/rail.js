@@ -1,6 +1,6 @@
 // Left rail: the organisation as a tree (department -> sub-team -> people)
 // with live state dots. Clicking focuses the floor.
-import { h, clear } from './dom.js';
+import { h, clear, put } from './dom.js';
 import { state } from './store.js';
 
 const TONE = { working: 'live', waiting: 'waiting', error: 'error', idle: 'idle' };
@@ -31,7 +31,7 @@ export function createRail(root, { onFocus }) {
     if (!lastBuiltFor) org.departments.forEach((d) => { if (d.on) expanded.add(d.key); });
     clear(root);
     dots.clear(); deptRows.clear();
-    root.append(
+    put(root, 
       h('div', { class: 'rail-head' },
         h('h2', { class: 'panel-title' }, 'Organisation'),
         h('p', { class: 'rail-sub' }, `${org.departments.length} departments · ${org.headcount} people`)),
@@ -41,11 +41,11 @@ export function createRail(root, { onFocus }) {
       const count = (d.lead ? 1 : 0) + d.teams.reduce((a, t) => a + t.people.length, 0);
       const open = expanded.has(d.key);
       const kids = h('ul', { class: 'tree-kids', id: `tree-${d.key}`, hidden: !open });
-      if (d.lead) kids.append(personRow(d.lead, true));
+      if (d.lead) put(kids, personRow(d.lead, true));
       for (const t of d.teams) {
         const teamBtn = h('button', { type: 'button', class: 'tree-team' }, h('span', { class: 'tree-team-name' }, t.name), h('span', { class: 'mono muted' }, String(t.people.length)));
         teamBtn.addEventListener('click', () => onFocus({ dept: d.key }));
-        kids.append(h('li', { class: 'tree-team-li' }, teamBtn, h('ul', { class: 'tree-people' }, t.people.map((p) => personRow(p, false)))));
+        put(kids, h('li', { class: 'tree-team-li' }, teamBtn, h('ul', { class: 'tree-people' }, t.people.map((p) => personRow(p, false)))));
       }
       const toggle = h('button', { type: 'button', class: 'tree-toggle', 'aria-expanded': open ? 'true' : 'false', 'aria-controls': `tree-${d.key}`, 'aria-label': `Show ${d.name} sub-teams` },
         h('span', { class: 'chev', 'aria-hidden': 'true' }));
@@ -68,11 +68,11 @@ export function createRail(root, { onFocus }) {
         if (!expanded.has(d.key)) toggle.click();
       });
       deptRows.set(d.key, { row, sum });
-      list.append(h('li', { class: 'tree-dept-li' }, h('div', { class: 'tree-dept-row' }, toggle, row), kids));
+      put(list, h('li', { class: 'tree-dept-li' }, h('div', { class: 'tree-dept-row' }, toggle, row), kids));
     }
-    root.append(list);
+    put(root, list);
     if (org.problems.length) {
-      root.append(h('div', { class: 'rail-problems', role: 'note' },
+      put(root, h('div', { class: 'rail-problems', role: 'note' },
         h('h3', null, 'Org file problems'),
         h('ul', null, org.problems.map((p) => h('li', null, p)))));
     }
@@ -96,9 +96,9 @@ export function createRail(root, { onFocus }) {
       for (const [k, { sum }] of deptRows) {
         const c = per.get(k) || {};
         clear(sum);
-        if (c.working) sum.append(h('span', { class: 'sum tone-live', title: 'working' }, String(c.working)));
-        if (c.waiting) sum.append(h('span', { class: 'sum tone-waiting', title: 'waiting for approval' }, String(c.waiting)));
-        if (c.error) sum.append(h('span', { class: 'sum tone-error', title: 'refused or failed' }, String(c.error)));
+        if (c.working) put(sum, h('span', { class: 'sum tone-live', title: 'working' }, String(c.working)));
+        if (c.waiting) put(sum, h('span', { class: 'sum tone-waiting', title: 'waiting for approval' }, String(c.waiting)));
+        if (c.error) put(sum, h('span', { class: 'sum tone-error', title: 'refused or failed' }, String(c.error)));
       }
     },
     setFocus(sel) {

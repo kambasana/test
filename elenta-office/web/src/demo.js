@@ -158,7 +158,7 @@ export function createDemoClient(options = {}) {
       job.plan = { why: `Split by sub-team fit: ${job.pieces.map((p) => p.team.toLowerCase()).join(', ')}.` };
       log({ kind: 'job.planned', dept: job.dept, job: job.id, agent: job.lead, text: `${job.pieces.length} piece(s): ${job.pieces.map((p) => p.team).join(', ')}` });
       job.state = 'working'; touch(job);
-      job.pieces.forEach((p, i) => later(job, 300 + i * 450, () => runPiece(job, p, 5200 + random() * 4200)));
+      job.pieces.forEach((p, i) => later(job, 300 + i * 450, () => runPiece(job, p, 9000 + random() * 7000)));
     });
   }
 
@@ -271,7 +271,7 @@ export function createDemoClient(options = {}) {
       job.plan = { why: `Split by sub-team fit: ${job.pieces.map((p) => p.team.toLowerCase()).join(', ')}.` };
       job.state = 'working';
       log({ kind: 'job.routed', dept: job.dept, job: job.id, agent: 'boss', text: `Routed to ${deptByKey.get(job.dept).name}: ${r.why}` }, Date.now() - 46000);
-      job.pieces.forEach((p, i) => runPiece(job, p, 9000 + i * 2500, 0.15 + i * 0.12));
+      job.pieces.forEach((p, i) => runPiece(job, p, 26000 + i * 6000, 0.1 + i * 0.12));
     }
     if (deptByKey.get('business').on) {
       const job = makeJob({ dept: 'business', text: 'Draft the renewal terms and a cost check for the test-range supplier contract' }, Date.now() - 2000);
