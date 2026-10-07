@@ -217,3 +217,56 @@ Identity: an **operations room**. Dark by default, light theme available.
   outside `out/`, no read outside the workspace; then approves and checks the deliverables folder.
 - Renders: Playwright screenshots of the overview, a focused department, a job view and the audit
   view (Chromium at `/opt/pw-browsers/chromium-1194/chrome-linux/chrome`, `--use-gl=swiftshader`).
+
+## 10. Phase 2 — ideas folded in from Munder Difflin (MIT, studied 2026-10-07)
+
+Munder Difflin (github.com/chaitanyagiri/munder-difflin, MIT) runs coding-agent CLIs as an office
+with an orchestrator. These general ideas fit Elenta Office; they are re-specified here in our terms.
+Nothing from its code or art is used (its pixel art has a separate paid licence).
+
+1. **Circuit breaker.** Every piece and job has a budget: wall time, tokens (from ACP usage updates)
+   and tool calls. A ladder: *steer* (send the agent a short correction prompt) when it repeats the
+   same refused tool call 3×, or a tool errors 3× in a row; *constrain* (drop it to read-only and
+   halve its remaining budget) on a second trip; *stop* (cancel the session, mark the piece failed,
+   tell the lead) on a third or when the budget is spent. Each step is an audit entry and shows on
+   the floor as the person's ring turning red.
+2. **Cost ledger.** Record tokens and cost per piece, job, person and department (from ACP
+   usage/turn data) in `data/ledger.jsonl`; show cost per job and a department total; per-department
+   monthly budget in settings with a warning at 80% and a stop at 100% (needs the owner's OK).
+3. **Model tiering.** `model` per person and per department in the org file, with a default of the
+   strongest model for the Boss and leads (routing, planning, combining) and a cheaper one for
+   pieces. Shown on each person's card.
+4. **Mid-run escalation (not only at the end).** An agent can raise a question to its lead, and a
+   lead to the Boss or the owner, through a structured message (below). Categories that ALWAYS go to
+   the owner and pause the job (`waiting_owner`): spending money, deleting or overwriting anything
+   outside `out/`, a change of scope from the request, a conflict the lead can't settle, anything
+   leaving the machine.
+5. **Messages between agents.** Each message: `id` (time-sortable), `job`, `from`, `to` (a person,
+   `lead`, `boss` or `owner`), `act` (`request` · `query` · `propose` · `inform` · `agree` ·
+   `refuse` · `done`), `subject`, `body`, `inReplyTo`, `hops`. Only request/query/propose need a
+   reply; each reply adds a hop; past 4 hops the lead (or Boss) decides instead of letting two agents
+   loop. Agents send messages by writing `out/messages/<id>.json`; the office (single writer) delivers
+   them, logs them and, when a recipient's turn has ended with mail waiting, prompts it again. The
+   floor shows an envelope flying between the two people.
+6. **Job board.** Each job has `board.md` written only by its lead (the plan, decisions, open
+   questions); every piece can read it. Shown in the job view.
+7. **Piece dependencies.** Pieces may have `after: [pieceId]` (e.g. the export check runs after the
+   document is written). The engine runs pieces when their dependencies are done; the plan view
+   draws the order.
+8. **Personal memory.** Each person has `library/people/<id>.md`: what they learned (from their own
+   one-line "remember:" notes at the end of a piece, and from rejected work). Kept short: when it
+   passes 4 KB the lead condenses it into a summary. Read at the start of every piece.
+9. **Engines.** Because every run is ACP, a person can use any ACP agent: `engine` in the org file
+   names a command from `settings.engines` (default: the Claude adapter). This allows other vendors'
+   agents or a **local model** for work that must not leave the machine — with the same permission
+   policy, workspace and audit. A local model does not by itself make controlled material permissible;
+   that stays a compliance decision.
+10. **Steer and resume.** The owner can send a running person a steering note (delivered as a
+    message, then a new prompt) or stop them gracefully. On restart, running pieces are resumed
+    (ACP `session/load` where the engine supports it) instead of failed; their `out/` files are kept.
+11. **Scheduled missions (later).** Recurring jobs (e.g. "weekly export-control watch") with a
+    next-run time and a heartbeat in the UI.
+
+Not taken: raw terminals you can type into, agents running git or a shell, the paid sidebar
+features, and the third-party pixel art. The code sub-team writes code into `out/`; running tests is
+a later, separately approved feature (an office-run, allow-listed command inside the sandbox).
