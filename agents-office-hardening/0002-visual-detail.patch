@@ -1,0 +1,403 @@
+From eb49eeb6b61eb60d3a189edbf30852b49999b404 Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 7 Oct 2026 15:17:10 +0000
+Subject: [PATCH] Visual pass: environment light, contact shadows, rugs and
+ dept props, detailed chairs/people, readable labels, compact cards, quiet
+ wires
+
+---
+ src/builders.js | 148 +++++++++++++++++++++++++++++++++++++++++++++++-
+ src/main.js     |  66 ++++++++++++++++++---
+ src/mcp.js      |   8 ++-
+ src/shell.html  |   6 ++
+ 4 files changed, 216 insertions(+), 12 deletions(-)
+
+diff --git a/src/builders.js b/src/builders.js
+index 67c4cc0..ebe5162 100644
+--- a/src/builders.js
++++ b/src/builders.js
+@@ -41,7 +41,7 @@ export function rbox(w, d, h, color, r) {
+ }
+ 
+ /* ---------- plinth: floating white pod with pastel dept floor ---------- */
+-export function makePlinth(w, d, floorColor) {
++export function makePlinth(w, d, floorColor, chip) {
+   const g = new THREE.Group();
+   const body = rbox(w, d, PLINTH_H, WHITE, 0.9);
+   body.position.y = -PLINTH_H;
+@@ -51,6 +51,114 @@ export function makePlinth(w, d, floorColor) {
+   floor.position.y = 0;
+   floor.castShadow = false;
+   g.add(floor);
++  // V3.8: a dept-coloured hairline in the reveal, so each pod reads as its department from far out
++  if (chip) {
++    const rim = rbox(w - 0.36, d - 0.36, 0.1, mat(chip, { rough: 0.6 }), 0.8);
++    rim.position.y = -0.05; rim.castShadow = false; rim.userData.part = 'rim';
++    g.add(rim);
++  }
++  return g;
++}
++
++/* ---------- V3.8 detail pass: grounding, rugs and one prop per department ---------- */
++let blobTex = null;
++function contactTex() { // a soft radial falloff, drawn once and shared by every contact shadow
++  if (blobTex) return blobTex;
++  const c = document.createElement('canvas'); c.width = c.height = 128;
++  const x = c.getContext('2d');
++  const gr = x.createRadialGradient(64, 64, 6, 64, 64, 62);
++  gr.addColorStop(0, 'rgba(21,20,20,0.55)'); gr.addColorStop(0.55, 'rgba(21,20,20,0.22)'); gr.addColorStop(1, 'rgba(21,20,20,0)');
++  x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
++  blobTex = new THREE.CanvasTexture(c); blobTex.colorSpace = THREE.SRGBColorSpace;
++  return blobTex;
++}
++/** A soft ambient-occlusion pool on the floor: grounds desks, chairs and people where the key light can't. */
++export function makeContactShadow(w, d, opacity = 0.5) {
++  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d),
++    new THREE.MeshBasicMaterial({ map: contactTex(), transparent: true, opacity, depthWrite: false }));
++  m.rotation.x = -Math.PI / 2; m.position.y = 0.135; m.renderOrder = 1; m.userData.part = 'contact';
++  return m;
++}
++/** A rug under the desk cluster: the floor colour pulled slightly toward the dept chip. */
++export function makeRug(w, d, floorColor, chip) {
++  const c = new THREE.Color(floorColor).lerp(new THREE.Color(chip), 0.18);
++  const rug = rbox(w, d, 0.04, mat('#' + c.getHexString(), { rough: 1 }), 0.9);
++  rug.position.y = 0.12; rug.castShadow = false; rug.userData.part = 'rug';
++  return rug;
++}
++function boardTexture(draw, w = 512, h = 320) {
++  const c = document.createElement('canvas'); c.width = w; c.height = h;
++  draw(c.getContext('2d'), w, h);
++  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 4;
++  return t;
++}
++function standingBoard(tex, w, h) { // a board on two thin legs, facing the camera once rotated
++  const g = new THREE.Group();
++  const frame = rbox(w + 0.2, 0.12, h + 0.2, '#E9E7DF', 0.06); frame.position.y = 1.6; g.add(frame);
++  const face = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
++  face.position.set(0, 1.7 + h / 2, 0.07); g.add(face);
++  for (const sx of [-1, 1]) {
++    const leg = rbox(0.12, 0.12, 1.65, '#8C8A83', 0.04); leg.position.set(sx * (w / 2 - 0.2), 0, -0.02); g.add(leg);
++  }
++  return g;
++}
++/** Sales: a whiteboard with the pipeline funnel sketched on it. */
++export function makeWhiteboard(chip) {
++  return standingBoard(boardTexture((x, W, H) => {
++    x.fillStyle = '#FFFFFF'; x.fillRect(0, 0, W, H);
++    x.fillStyle = '#151414'; x.font = '600 26px Georgia, serif'; x.fillText('Pipeline', 26, 44);
++    const rows = [[0.9, 'new'], [0.66, 'qualified'], [0.44, 'proposal'], [0.26, 'won']];
++    rows.forEach(([f, l], i) => {
++      const bw = (W - 200) * f, y = 76 + i * 56;
++      x.fillStyle = chip; x.globalAlpha = 0.85 - i * 0.12; x.fillRect((W - 120 - bw) / 2 + 10, y, bw, 38); x.globalAlpha = 1;
++      x.fillStyle = '#5A5A5A'; x.font = '18px Menlo, monospace'; x.fillText(l, W - 112, y + 25);
++    });
++  }), 3.6, 2.25);
++}
++/** Marketing: a mood board on an easel, swatches and pinned cards. */
++export function makeMoodBoard(chip) {
++  return standingBoard(boardTexture((x, W, H) => {
++    x.fillStyle = '#C9A57A'; x.fillRect(0, 0, W, H); // cork
++    const cards = [[24, 24, 150, 120, chip], [190, 30, 130, 170, '#FDFFF8'], [336, 22, 150, 110, '#151414'], [30, 160, 140, 130, '#FDFFF8'], [336, 150, 150, 140, chip]];
++    cards.forEach(([cx, cy, cw, ch, col], i) => {
++      x.fillStyle = 'rgba(0,0,0,.18)'; x.fillRect(cx + 4, cy + 5, cw, ch);
++      x.fillStyle = col; x.fillRect(cx, cy, cw, ch);
++      x.fillStyle = i % 2 ? '#E5484D' : '#2E86AB'; x.beginPath(); x.arc(cx + cw / 2, cy + 8, 6, 0, 7); x.fill();
++    });
++    x.fillStyle = '#151414'; x.font = 'italic 30px Georgia, serif'; x.fillText('Aa', 228, 140);
++  }), 3.4, 2.1);
++}
++/** Finance: two filing cabinets with drawer pulls. */
++export function makeFilingCabinets() {
++  const g = new THREE.Group();
++  for (const sx of [-0.75, 0.75]) {
++    const cab = rbox(1.4, 1.5, 3.1, '#D9D7CF', 0.1); cab.position.set(sx, 0, 0); g.add(cab);
++    for (let i = 0; i < 4; i++) {
++      const pull = rbox(0.5, 0.08, 0.1, '#8C8A83', 0.03); pull.position.set(sx, 0.45 + i * 0.72, 0.76); g.add(pull);
++    }
++  }
++  return g;
++}
++/** Emails: a pigeonhole mail sorter with letters in some slots. */
++export function makeMailSorter(chip) {
++  const g = new THREE.Group();
++  const box = rbox(3.2, 1.1, 2.6, '#E9E7DF', 0.08); g.add(box);
++  for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) {
++    const slot = rbox(0.66, 0.2, 0.62, '#CFCBC0', 0.04); slot.position.set(-1.14 + c * 0.76, 0.22 + r * 0.8, 0.5); g.add(slot);
++    if ((r + c) % 3 !== 1) { const env = rbox(0.5, 0.08, 0.36, (r + c) % 2 ? '#FDFFF8' : chip, 0.02); env.position.set(-1.14 + c * 0.76, 0.4 + r * 0.8, 0.62); g.add(env); }
++  }
++  return g;
++}
++/** Delivery: a shelf of labelled project boxes. */
++export function makeShelf(chip) {
++  const g = new THREE.Group();
++  for (const sx of [-1.7, 1.7]) { const up = rbox(0.14, 1.2, 3.2, '#8C8A83', 0.04); up.position.set(sx, 0, 0); g.add(up); }
++  for (let i = 0; i < 3; i++) {
++    const board = rbox(3.5, 1.2, 0.1, '#DCC29A', 0.04); board.position.set(0, 0.3 + i * 1.05, 0); g.add(board);
++    for (let j = 0; j < 3; j++) {
++      const bx = rbox(0.9, 0.9, 0.7, j === 1 ? chip : '#F2EEE4', 0.06); bx.position.set(-1.1 + j * 1.1, 0.4 + i * 1.05, 0.05); g.add(bx);
++    }
++  }
+   return g;
+ }
+ 
+@@ -127,6 +235,16 @@ export function makeDesk(chip, live) {
+   const kb = rbox(1.5, 0.5, 0.07, '#EFEFEA', 0.06); kb.position.set(0, 2.22, 0.35); g.add(kb);
+   const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.14, 0.3, 12), mat(chip));
+   mug.position.set(1.9, 2.36, 0.4); mug.castShadow = true; g.add(mug);
++  // V3.8: a mouse, a notepad with a pen, a cable down the back, and a soft pool of shade under the desk
++  const mouse = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 8), mat('#EFEFEA', { rough: 0.5 }));
++  mouse.scale.set(1, 0.45, 1.4); mouse.position.set(1.05, 2.27, 0.4); g.add(mouse);
++  const pad = rbox(0.75, 0.95, 0.04, '#FDFFF8', 0.04); pad.position.set(-1.65, 2.32, 0.25); pad.rotation.y = 0.18; g.add(pad);
++  const pen = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.7, 6), mat('#151414'));
++  pen.rotation.z = Math.PI / 2; pen.rotation.y = 0.5; pen.position.set(-1.6, 2.38, 0.3); g.add(pen);
++  const cable = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 2.1, 6), mat('#3A3A3E'));
++  cable.position.set(0.15, 1.15, -1.05); g.add(cable);
++  screen.material.toneMapped = false;
++  g.add(makeContactShadow(6.4, 3.8, 0.42));
+   return { group: g, screenSet };
+ }
+ 
+@@ -136,8 +254,20 @@ export function makeChair() {
+   const back = rbox(1.25, 0.2, 1.35, '#7C8779', 0.3); back.position.set(0, 1.5, 0.62); g.add(back);
+   const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.85, 8), mat('#55555A'));
+   pole.position.y = 0.82; g.add(pole);
+-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.6, 0.1, 10), mat('#55555A'));
+-  base.position.y = 0.4; base.castShadow = true; g.add(base);
++  // V3.8: a five-star base on casters and two armrests instead of a disc
++  const metal = mat('#55555A', { rough: 0.45, metal: 0.4 });
++  for (let i = 0; i < 5; i++) {
++    const a = i / 5 * Math.PI * 2;
++    const spoke = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.08, 0.12), metal);
++    spoke.position.set(Math.cos(a) * 0.35, 0.4, Math.sin(a) * 0.35); spoke.rotation.y = -a; spoke.castShadow = true; g.add(spoke);
++    const caster = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6), mat('#2B2B2E'));
++    caster.position.set(Math.cos(a) * 0.68, 0.31, Math.sin(a) * 0.68); g.add(caster);
++  }
++  for (const sx of [-1, 1]) {
++    const arm = rbox(0.12, 0.8, 0.1, '#6E786B', 0.04); arm.position.set(sx * 0.68, 1.75, 0.1); g.add(arm);
++    const post = rbox(0.08, 0.08, 0.5, metal, 0.03); post.position.set(sx * 0.68, 1.3, 0.2); g.add(post);
++  }
++  g.add(makeContactShadow(2.2, 2.2, 0.32));
+   return g;
+ }
+ 
+@@ -185,6 +315,18 @@ export function makePerson({ hair, skin, chip, lead }) {
+     new THREE.SphereGeometry(0.54 * S, 18, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hairM);
+   hairMesh.position.y = 0.31 * S; headG.add(hairMesh);
+   g.add(headG);
++  // V3.8: hands at the end of each arm, shoes at the end of each leg, a collar line at the neck
++  const handGeo = new THREE.SphereGeometry(0.14 * S, 10, 8);
++  for (const [sh, arm] of [[shL, armL], [shR, armR]]) {
++    const hand = new THREE.Mesh(handGeo, skinM); hand.position.y = arm.position.y - 0.48 * S; hand.castShadow = true; sh.add(hand);
++  }
++  const shoeM = mat('#2B2B2E', { rough: 0.6 });
++  for (const leg of [legL, legR]) {
++    const shoe = new THREE.Mesh(new THREE.SphereGeometry(0.18 * S, 10, 8), shoeM);
++    shoe.scale.set(1, 0.55, 1.5); shoe.position.set(0, -0.5 * S, 0.08 * S); leg.add(shoe); // rides the leg through walk and sit poses
++  }
++  const collar = new THREE.Mesh(new THREE.TorusGeometry(0.26 * S, 0.05 * S, 6, 16), mat(lead ? '#F2EEE4' : '#FDFFF8', { rough: 0.8 }));
++  collar.rotation.x = Math.PI / 2; collar.position.y = 2.42 * S; g.add(collar);
+ 
+   g.userData = { legs, legL, legR, shL, shR, torso, headG, S };
+   return g;
+diff --git a/src/main.js b/src/main.js
+index 04e2cf3..94c47a2 100644
+--- a/src/main.js
++++ b/src/main.js
+@@ -1,12 +1,14 @@
+ // Agents Office v2 — Three.js isometric office with zoom-driven LOD
+ // Far: clean pods + agent counts (Image 1 read). Near: diorama with 3D people + holo screens (Image 2 read).
+ import * as THREE from 'three';
++import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+ import { TOKENS, DEPTS, DEPT_KEYS, AGENTS, LAYOUT, WORKLINES, APPROVAL_ASKS, APPROVAL_BY_AGENT } from './data.js';
+ import { hasScreens, makeScreen } from './screens.js'; // live screens (14 Sep): no-op without window.SCREENS
+ import { V1, FILE_GEN, STATS, KPIS, P, rnd, ri, person, money } from './v1data.js';
+ import { PROFILE, profileRows, profileTickKpi, profileMockup, applyTopbar } from './profile.js';
+ import {
+   PLINTH_H, mat, rbox, makePlinth, makeFloorTitle, makeDesk, makeChair,
++  makeContactShadow, makeRug, makeWhiteboard, makeMoodBoard, makeFilingCabinets, makeMailSorter, makeShelf,
+   makePerson, posePerson, poseWork, makePlant, makeServerRack, makeMeetingTable, makeWalkway, makeWarnSprite,
+ } from './builders.js';
+ import { initMcp } from './mcp.js';
+@@ -23,8 +25,16 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true
+ renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+ renderer.shadowMap.enabled = true;
+ renderer.shadowMap.type = THREE.VSMShadowMap;
++// V3.8 (visual pass): a faint studio environment gives the standard materials a little sheen
++// (wood, plastic, fabric) without filling in the soft key-light shadows that carry the depth.
+ 
+ const scene = new THREE.Scene();
++{
++  const pmrem = new THREE.PMREMGenerator(renderer);
++  scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
++  scene.environmentIntensity = 0.16;
++  pmrem.dispose();
++}
+ 
+ const FR = 42; // frustum half-height at zoom 1
+ const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -400, 800);
+@@ -97,7 +107,7 @@ function tickTween(now) {
+ }
+ 
+ /* ---------- lights: one warm key top-left + soft fill ---------- */
+-const hemi = new THREE.HemisphereLight(0xfdfff8, 0xd8d4c8, 0.85);
++const hemi = new THREE.HemisphereLight(0xfdfff8, 0xd8d4c8, 0.74); // V3.8: a touch lower — the environment adds the rest
+ scene.add(hemi);
+ const key = new THREE.DirectionalLight(0xfff1dd, 2.2);
+ key.position.set(-60, 90, 20);
+@@ -132,11 +142,27 @@ for (const [key_, L] of Object.entries(LAYOUT)) {
+   const dept = DEPTS[key_];
+   const g = new THREE.Group();
+   g.position.set(L.pos[0], 0, L.pos[1]);
+-  const plinth = makePlinth(L.w, L.d, dept.floor);
++  const plinth = makePlinth(L.w, L.d, dept.floor, key_ === 'brain' ? null : dept.chip);
+   g.add(plinth);
+   plinth.traverse(o => { if (o.isMesh) { o.userData.dept = key_; clickTargets.push(o); } });
+   plinth.children[0].userData.part = 'plinth'; plinth.children[1].userData.part = 'floor'; plinth.children[1].userData.chip = dept.chip; // dark mode re-tints these
+ 
++  // V3.8 detail pass: a rug under the desk cluster and one prop per department on the clear back strip
++  if (key_ !== 'brain') {
++    const rows = AGENTS.filter(a => a.dept === key_).map(a => (a.grid[1] - 1) * 6.4 - 1);
++    const z0 = Math.min(...rows) - 3.4, z1 = Math.max(...rows) + 3.6;
++    const rug = makeRug(L.w - 3.2, z1 - z0, dept.floor, dept.chip);
++    rug.position.set(0, 0.12, (z0 + z1) / 2); rug.userData.dept = key_;
++    g.add(rug);
++    const PROP = { emails: makeMailSorter, sales: makeWhiteboard, marketing: makeMoodBoard, fin: makeFilingCabinets, delivery: makeShelf, ops: makeServerRack };
++    const prop = PROP[key_](dept.chip);
++    prop.position.set(-L.w / 2 + 2.2, 0.12, -8); // back-left corner: clear of the desks and of the lead's name pill
++    prop.rotation.y = Math.PI / 4;
++    const pool = makeContactShadow(4.2, 2.4, 0.38); pool.position.set(0, 0.015, 0.2); prop.add(pool);
++    prop.traverse(o => { if (o.isMesh) o.userData.dept = key_; });
++    g.add(prop);
++  }
++
+   // no floor titles — the billboards name each department (AJ's call, M2.3)
+   scene.add(g);
+   deptRT[key_] = { group: g, L };
+@@ -231,6 +257,7 @@ for (const a of AGENTS) {
+   person.position.copy(base).add(rot(new THREE.Vector3(0, 0, 1.7)));
+   person.rotation.y = ANG + Math.PI; // face the monitor
+   person.traverse(o => { if (o.isMesh) { o.userData.agentId = a.id; o.userData.dept = a.dept; personTargets.push(o); } });
++  { const pool = makeContactShadow(1.7, 1.7, 0.4); pool.position.y = 0.015; person.add(pool); } // V3.8: follows them when they walk
+   scene.add(person);
+ 
+   const warn = makeWarnSprite();
+@@ -384,14 +411,14 @@ for (const k of [...DEPT_KEYS, 'brain']) {
+     marketing: [-36, 8.6, 13.4],
+     emails:    [-30, 8.6, -32.6],
+     delivery:  [0, 10.6, -57.6],   // y 10.6: the top-bar clamp otherwise lands it on the back-row pills
+-    sales:     [48, 8.6, -32],     // over the pod's right corner — past the DELIVERY pod's desks and the Sales Lead pill
+-    ops:       [-13.5, 4, 54],     // side LEFT
++    sales:     [44, 0, -31],       // V3.8: hangs BELOW the pod's front-right face, clear of the Sales Lead
++    ops:       [-4, 0, 66],        // V3.8: hangs BELOW the pod's front-left face, into the empty corner
+     fin:       [43.5, 4, 17],      // side RIGHT
+     brain:     [-5.5, 3.2, -5.5],  // just above the pod's back corner
+   };
+   deptRT[k].badgeAnchor = new THREE.Vector3(...ANCHOR[k]);
+   if (k === 'fin') deptRT[k].sideBadge = true;
+-  if (k === 'ops') { deptRT[k].sideBadge = true; deptRT[k].sideLeft = true; }
++  if (k === 'ops' || k === 'sales') deptRT[k].belowBadge = true; // V3.8: these two used to sit on their own desks
+ }
+ function updateBillboards() {
+   for (const k of Object.keys(BB_ROWS)) {
+@@ -1297,7 +1324,12 @@ function tickLOD() {
+     // keep billboards fully on screen (camera-readability rule)
+     const bh = d.badge.offsetHeight * badgeScale, bw = d.badge.offsetWidth * badgeScale;
+     let xf;
+-    if (d.sideBadge) { // anchored by an edge, vertically centred (emails/sales/fin/delivery)
++    if (d.belowBadge) { // V3.8: hangs under its anchor, centred
++      const rightEdge = innerWidth - ((tasks ? tasks.panelWidth() : 400) + 26);
++      sy = clamp(sy, 64, innerHeight - bh - 8);
++      sx = clamp(sx, bw / 2 + 8, rightEdge - bw / 2);
++      xf = 'translate(-50%,8px)';
++    } else if (d.sideBadge) { // anchored by an edge, vertically centred (emails/sales/fin/delivery)
+       const rightEdge = innerWidth - ((tasks ? tasks.panelWidth() : 400) + 26); // V3.3: never under the panel
+       sy = clamp(sy, 64 + bh / 2, innerHeight - bh / 2 - 8);
+       if (d.sideLeft) { sx = clamp(sx, bw + 8, rightEdge); xf = 'translate(-100%,-50%)'; }
+@@ -1308,17 +1340,37 @@ function tickLOD() {
+       sx = clamp(sx, bw / 2 + 8, rightEdge - bw / 2);
+       xf = 'translate(-50%,-100%)';
+     }
++    d.badge.classList.toggle('compact', z < 1.2 && k !== 'brain'); // V3.8: compact at overview
+     d.badge.style.transform = `translate(${sx}px,${sy}px) ${xf} scale(${badgeScale})`;
+     d.badge.style.opacity = 1 - 0.75 * focusDim; // unfocused boards recede with the scene
+     d.badge.style.pointerEvents = 'auto';
+   }
+   // name pills stay on at EVERY zoom (AJ's call) — smaller when far, full-size when near
+   const pillScale = 0.62 + 0.38 * smooth(1.2, 2.4, z);
++  // V3.8: name pills no longer sit on top of each other — each one that overlaps a pill above it
++  // is nudged up just clear of it, so every name stays whole and readable (Baymard: never clip
++  // what people need to read).
++  const placed = [];
+   for (const r of Object.values(R)) {
+     const p = r.person.position;
+     const [sx, sy] = toScreen(v3.set(p.x, p.y + 5.9 * (r.a.lead ? 1.12 : 1), p.z).clone());
+     r.pill.style.display = 'block';
+-    r.pill.style.transform = `translate(${sx}px,${sy}px) translate(-50%,-100%) scale(${pillScale})`;
++    placed.push({ r, x: sx, y: sy, w: (r.pill.offsetWidth || 90) * pillScale, h: (r.pill.offsetHeight || 22) * pillScale });
++  }
++  placed.sort((a, b) => b.y - a.y); // nearest the camera (lowest on screen) keeps its spot
++  for (let i = 0; i < placed.length; i++) {
++    const a = placed[i];
++    for (let pass = 0; pass < 3; pass++) {
++      let moved = false;
++      for (let j = 0; j < i; j++) {
++        const b = placed[j];
++        if (Math.abs(a.x - b.x) < (a.w + b.w) / 2 + 4 && Math.abs(a.y - b.y) < (a.h + b.h) / 2 + 2) { a.y = b.y - (a.h + b.h) / 2 - 3; moved = true; }
++      }
++      if (!moved) break;
++    }
++  }
++  for (const { r, x, y } of placed) {
++    r.pill.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%) scale(${pillScale})`;
+     const dimmed = focused && focused !== 'brain' && r.a.dept !== focused;
+     r.pill.style.opacity = dimmed ? 1 - 0.85 * focusDim : 1;
+   }
+diff --git a/src/mcp.js b/src/mcp.js
+index 677d1a4..ddff8aa 100644
+--- a/src/mcp.js
++++ b/src/mcp.js
+@@ -347,7 +347,9 @@ export function initMcp({ scene, hud, LAYOUT, DEPTS, FR, R, connectors = null })
+     el.setAttribute('opacity', '0');
+     svg.appendChild(el);
+     wirePulses.push({ dept, el, reverse, shared: sk, model, t0: performance.now() + delay, dur: 1400 });
++    if (dept) lastUse[dept] = performance.now() + delay;
+   }
++  const lastUse = {}; // dept → when a connector last carried work for it (V3.8 quiet wires)
+   let stripDept = undefined;
+   function tickWires(now, dt, wireA, focused) {
+     // V3.4 (AJ): inside a department the header strip shows THAT dept's connectors (the others
+@@ -407,10 +409,12 @@ export function initMcp({ scene, hud, LAYOUT, DEPTS, FR, R, connectors = null })
+         `${ex + side * bow} ${ey - (ey - jy) * 0.45}, ${ex} ${ey}`);
+       w.offset -= dt * (f ? 13 : 6); // slow crawl toward the pod (slower still at rest)
+       w.path.setAttribute('stroke-dashoffset', w.offset);
+-      w.path.setAttribute('stroke-opacity', (f ? 0.8 : 0.26) * wireA); // V3.5: at rest the loom is half as loud (AJ)
++      // V3.8: at rest a wire is a whisper; it brightens for ~4 s after a connector is really used
++      const busy = Math.max(0, 1 - (now - (lastUse[dept] || -1e9)) / 4000);
++      w.path.setAttribute('stroke-opacity', (f ? 0.8 : 0.1 + 0.6 * busy) * wireA);
+       w.path.setAttribute('stroke-width', f ? 2.2 : 1.6); // heavier in focus so the camera reads it
+       w.branch.setAttribute('stroke-dashoffset', w.offset);
+-      w.branch.setAttribute('stroke-opacity', (f ? 0.85 : 0.3) * wireA);
++      w.branch.setAttribute('stroke-opacity', (f ? 0.85 : 0.12 + 0.6 * busy) * wireA);
+       w.branch.setAttribute('stroke-width', f ? 1.8 : 1.3);
+       w.jdot.setAttribute('cx', jx); w.jdot.setAttribute('cy', jy);
+       w.jdot.setAttribute('opacity', (f ? 0.75 : 0.38) * wireA);
+diff --git a/src/shell.html b/src/shell.html
+index 005b149..b6cfa45 100644
+--- a/src/shell.html
++++ b/src/shell.html
+@@ -204,6 +204,12 @@
+ 
+   /* billboard metrics + approval row */
+   .badge .b-metrics { margin-top: 7px; border-top: 1px solid var(--hairline); padding-top: 6px; }
++  /* V3.8: at overview a card shrinks to name + count + doing/next/done so it stops covering its own
++     desks; the figures come back on hover or keyboard focus, and a small "+ figures" cue says so */
++  .badge.compact .b-metrics { display: none; }
++  .badge.compact:hover .b-metrics, .badge.compact:focus-within .b-metrics { display: block; }
++  .badge.compact .b-count::after { content: '+ figures'; display: block; margin-top: 2px; font-size: 8.5px; letter-spacing: .16em; color: var(--grey); text-transform: uppercase; }
++  .badge.compact:hover .b-count::after { content: none; }
+   .badge .m-row {
+     display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
+     padding: 1.5px 0;
+-- 
+2.43.0
+

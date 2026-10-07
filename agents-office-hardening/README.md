@@ -11,6 +11,12 @@ Contents:
   `node check.mjs` passes 35 of 36 checks. The one failure is the Chrome smoke test, which can't
   run without a Chrome install. The patch also adds a new check that another website can't drive
   the office.
+- `0002-visual-detail.patch`: the 3D detail pass, applied on top of 0001. Cards stop covering
+  their desks, name tags stop overlapping, and each department gets a rug, a rim and a prop.
+  Everything gets contact shadows. Chairs, people and desks get more detail, materials get a faint
+  studio light, and connection lines stay quiet until used. Before and after: board P7 on the
+  design canvas. The check suite result is unchanged (35 of 36).
+- `PLAN.md`: the build plan and the launch scenario.
 - `docker/`: two ways to run the office in isolation, a Docker Sandboxes microVM (tier 1) or a
   hardened Compose stack (tier 2).
 

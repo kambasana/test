@@ -6,29 +6,43 @@ The drawings are on the "Plan & additions" page of the design canvas:
 Security comes before capability: nothing new runs outside the sandbox. Each phase ends with a
 check that must pass before the next phase starts.
 
-## Scenario: pitch Ridgeline Roofing
+## Scenario: the office plans its own launch
 
-Ridgeline Roofing wants a new website and a growth retainer.
+The office plans the public launch of Agents Office. It may use web search and local tools only:
+no email, social or payment connectors are attached, so nothing can be sent.
 
 **Why this scenario:**
 
-- Roofing is on the ideal-customer list (`icp`).
-- The offer ladder has both products.
-- The notes hold everything else the agents need: rates (`contractor-terms`), `proposal-template`,
-  `qa-checklist`, `visual-identity`, `voice`, the `reel-hooks` line and `numbers-ledger`.
-- There are no list prices in the notes, so the agents have to work pricing out from the rates and
-  say so. That makes it a fair test.
+- It is useful in its own right, to you and to AJ.
+- The market moves fast, so the research has to be live and every claim needs a source.
+- Every department has a real job, and the hand-offs depend on each other.
+- It ends in real local actions as well as text.
+- The source material is real: the repo's README, changelog and LICENSE, plus this security kit.
 
-**Deliverables**, all in `brain/Agents Office/projects/ridgeline-pitch/`:
+**Who does what:**
 
-| Deliverable | Files | Built by |
+| Department | Desk | Job |
 |---|---|---|
-| Analysis | `analysis.md`, `pricing.csv`, `pricing-chart.png` | INTEL and ACCOUNTING LEAD |
-| Document | `proposal.md`, rendered to `proposal.docx` and `proposal.pdf` | PROPOSALS, using the proposal skill |
-| Presentation | `deck.md`, rendered to `deck.pptx` and `deck.pdf` (8–10 slides) | GRAPHICS DESIGNER, using the new pitch-deck skill |
-| Appendix | `project-plan.md` | PROJECT CO-ORDINATOR |
+| Operations | OPERATIONS LEAD, INTEL, LEGAL REVIEW, COMPLIANCE CHECKER | Plans the project. Competitor scan with sources. Security and licence FAQ. |
+| Marketing | MARKETING LEAD, RESEARCH, GRAPHICS DESIGNER, NEWSLETTER | Positioning brief. Launch deck. A launch newsletter, drafted only. |
+| Finance | ACCOUNTING LEAD | Licence tiers and Claude running cost per seat, every assumption marked. |
+| Sales | SALES LEAD, PROPOSALS | Ideal customer, the three likely objections and answers. A one-page pilot offer. |
+| Emails | CLIENT EMAILS | A launch email for early users. It waits in Waiting on you. |
+| Delivery | PROJECT CO-ORDINATOR, QA CHECKER | Milestones on the calendar, a weekly competitor-watch routine. QA traces every claim. |
 
-QA CHECKER traces every number. The owner approves, and nothing is sent anywhere.
+**Deliverables**, all in `brain/Agents Office/projects/launch/`:
+
+| Deliverable | Files |
+|---|---|
+| Analysis | `market-analysis.md`, `competitors.csv`, `pricing.csv`, `pricing-chart.png` |
+| Documents | `positioning-brief.md` and `security-licence-faq.md`, rendered to DOCX and PDF (pandoc) |
+| Presentation | `launch-deck.md`, rendered to PPTX and PDF (Marp), 10 slides |
+| Actions | Calendar milestones as scheduled tasks; a weekly read-only competitor-watch routine; new brain skills (`market-analysis`, `pitch-deck`, `launch-plan`); launch email and newsletter drafts awaiting approval; one project note linking every file and source |
+
+**Pass mark:** every claim has a source or is marked (assumed); every file opens; the calendar,
+routine, skills and approvals show up in the dashboard; QA reports nothing unresolved; total time
+and Claude usage are recorded. A smaller client pitch (Ridgeline Roofing, from the sample notes)
+stays as a quick smoke test.
 
 ## Phases
 
