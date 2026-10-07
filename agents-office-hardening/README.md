@@ -16,9 +16,14 @@ Contents:
   Everything gets contact shadows. Chairs, people and desks get more detail, materials get a faint
   studio light, and connection lines stay quiet until used. Before and after: board P7 on the
   design canvas. The check suite result is unchanged (35 of 36).
+- `0003-departments.patch`: your own departments, applied on top of 0002. Switch departments on
+  and off, swap what fills the floor (a *pack*, such as the included R&D lab), and run *wings*
+  (separate offices) that link to each other. See "Departments, packs and wings" below and board
+  P8 on the design canvas. `node check.mjs` passes 39 of 40, with four new checks; the one failure
+  is still the Chrome smoke test.
 - `PLAN.md`: the build plan and the launch scenario.
 - `docker/`: two ways to run the office in isolation, a Docker Sandboxes microVM (tier 1) or a
-  hardened Compose stack (tier 2).
+  hardened Compose stack (tier 2), plus `sbx-wing.sh` to run a wing in its own microVM.
 
 ## Why it matters: the "lethal trifecta"
 
@@ -108,7 +113,9 @@ Agents can't change the policy, because `sbx` isn't reachable from inside the sa
 - **Network policy:** choose **Locked Down** at `sbx login`, then open hosts one at a time with
   `sbx policy allow network …`. Watch denied requests with `sbx policy log`.
 - **Script:** `docker/sbx-run.sh` creates the sandbox, starts the office inside it and publishes
-  port 4520.
+  port 4520. Its network rules use `--sandbox`, so they apply to that one sandbox only. Global
+  rules reach every sandbox on the machine, so a wing could never be stricter than them: keep the
+  global list empty.
 - **Limits, by design:** your host's Chrome and any local MCP servers aren't reachable from inside
   the sandbox. That is the point.
 
@@ -157,6 +164,43 @@ npx @anthropic-ai/sandbox-runtime node serve.mjs
 Allow writes only to the repo, the notes folder, `~/.claude` and the temp directory. Allow network
 access only to Anthropic's hosts.
 
+## Departments, packs and wings
+
+The upstream office is fixed at six departments and 35 desks, set up as an agency. The floor
+geometry (six positions around the brain) is hand-tuned, so the patch keeps the positions and
+makes what sits in them yours.
+
+| Level | How | What happens |
+|---|---|---|
+| Switch off | ▦ DEPARTMENTS in the top bar, or `"departments": { "emails": { "on": false } }` | The pod becomes a dashed outline with its name. No desks, no tasks, no runs; the server refuses work sent to it. Notes stay in the brain. At least one department stays on. |
+| Swap (pack) | Pick a pack in the panel, or `"pack": "rnd-lab"` | `packs/<name>.json` renames each position, recolours it, picks its prop and gives every desk a name, role, tasks, chat chips and screen lines. Desks map in order onto the position's seats, lead first; a pack with fewer desks leaves the rest out. |
+| Wing | `docker/sbx-wing.sh`, and `"wings": [...]` in each office's settings | A wing is a second office with its own copy of the code, brain folder, tasks, settings, port and sandbox. The top bar links the offices; nothing else is shared. |
+
+Changes saved from the panel go to that office's own settings file and take effect on restart.
+Environment variables `AO_PACK`, `AO_OFF`, `AO_CONFIG` (a different settings file) and `AO_DATA`
+(a different task folder) override the files.
+
+**Isolation notes for a wing:**
+
+- **Separate code copy.** `sbx-wing.sh` copies the code without `brain/`, `data/` or local
+  settings, so the main office's notes never sit inside the wing's VM.
+- **The page draws the served office's own brain.** Upstream, the page drew the brain baked in at
+  build time, whatever brain the server used. With wings, that would have shown one office's note
+  titles in another. An empty brain now stays empty.
+- **Its own network rules**, with web search and Chrome off by default.
+- **Pack edits live in the brain.** In a pack office, `office.agents.json` and
+  `office.agents.local.json` describe the agency's seats and are skipped; edits go in that
+  office's `brain/Agents Office/agents.json`.
+
+**What a wing can hold.** Every agent run sends its prompt and the notes it reads to Claude's API.
+A sandbox controls what the agents can reach, not where the work is processed. Keep
+export-controlled (ITAR/EAR), classified and CUI material out of any office like this; that needs
+an approved deployment. Check intended uses against Anthropic's usage policy.
+
+**Not verified here:** `sbx-wing.sh` follows the current `sbx` docs (`--sandbox` rules,
+`policy rm --resource`, extra workspaces) but hasn't been run, because this cloud session has no
+KVM. Run it on your machine and check `sbx policy ls --sandbox agents-office-<wing>`.
+
 ## Sources
 
 - [Anthropic: Securely deploying AI agents](https://code.claude.com/docs/en/agent-sdk/secure-deployment)
@@ -164,5 +208,6 @@ access only to Anthropic's hosts.
 - [Claude Code sandboxing](https://code.claude.com/docs/en/sandboxing) and [sandbox environments](https://code.claude.com/docs/en/sandbox-environments)
 - [Claude Code CLI reference](https://code.claude.com/docs/en/cli-reference)
 - [Docker Sandboxes quickstart (sbx)](https://github.com/mikegcoleman/sbx-quickstart) and [local policy](https://docs.docker.com/ai/sandboxes/security/policy/)
+- [sbx policy allow network (per-sandbox rules)](https://docs.docker.com/reference/cli/sbx/policy/allow/network/), [local policy and `policy rm`](https://docs.docker.com/ai/sandboxes/governance/access-controls/local.md), [sbx create (extra workspaces, `:ro`)](https://docs.docker.com/reference/cli/sbx/create/claude/)
 - [Docker MCP Gateway interceptors](https://www.ajeetraina.com/a-quick-look-at-docker-mcp-gateway-interceptors/)
 - [The lethal trifecta](https://simonwillison.net/2025/Jun/16/the-lethal-trifecta/)

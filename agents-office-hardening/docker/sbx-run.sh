@@ -10,12 +10,14 @@ NAME=${NAME:-agents-office}
 # Either store an API key (sbx injects it at its proxy; the office never sees it) or sign in to Claude inside the sandbox.
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then echo "$ANTHROPIC_API_KEY" | sbx secret set -g anthropic; fi
 
-# 2. Network: start from "Locked Down" (chosen at `sbx login`) and open only what the office needs.
-sbx policy allow network "api.anthropic.com,claude.ai,platform.claude.com,registry.npmjs.org"
-# add connector hosts deliberately, e.g.: sbx policy allow network "gmail.googleapis.com"
-
-# 3. Create the sandbox with this folder as its workspace, then start the office inside it.
+# 2. Create the sandbox with this folder as its workspace.
 sbx create --name="$NAME" claude .
+
+# 3. Network: start from "Locked Down" (chosen at `sbx login`) and open only what THIS office needs.
+# --sandbox scopes the rule to this one sandbox. A global rule (no --sandbox) would reach every
+# sandbox on the machine, including a stricter wing, so keep the global list empty.
+sbx policy allow network --sandbox "$NAME" "api.anthropic.com,claude.ai,platform.claude.com,registry.npmjs.org"
+# add connector hosts deliberately, e.g.: sbx policy allow network --sandbox "$NAME" "gmail.googleapis.com"
 # The workspace appears inside the microVM at the same path as on the host.
 sbx exec -d "$NAME" bash -lc "cd '$PWD' && npm ci && node build.mjs && AO_HOST=0.0.0.0 PORT=4520 nohup node serve.mjs > office.log 2>&1 &"
 
