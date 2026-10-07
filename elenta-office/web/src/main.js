@@ -153,8 +153,7 @@ async function boot() {
       if (res && res.id) ingestJob(res); else ingestJob(await state.client.job(id));
     },
     onRevise: async (job) => {
-      const text = `${job.text}\n\nRevise: ${job.note || 'see the owner\'s rejection note'}`;
-      const created = await state.client.createJob({ dept: job.dept, text, mode: job.mode || 'team' });
+      const created = await state.client.revise(job.id, job.note || '');
       if (created && created.id) { ingestJob(created); jobView.open(created.id); }
     },
     onFocusPerson: (id) => { const p = state.org.people.get(id); if (p) { jobView.close(); focus({ dept: p.dept.key, person: id }); } },
@@ -276,7 +275,7 @@ async function boot() {
     state.activity.push(ev);
     if (state.activity.length > 500) state.activity.splice(0, state.activity.length - 500);
     const kind = String(ev.kind || '');
-    const path = String(ev.path || ev.text || '');
+    const path = String(ev.path || (ev.data && ev.data.path) || ev.text || '');
     if (kind === 'read' && !/(^|\/)out\//.test(path)) floor.pulse('library', ev.agent, '#9C8CF0');
     if (isRefusal(ev) || kind === 'error') {
       state.flashes.set(ev.agent, { tone: 'error', until: Date.now() + 7000 });

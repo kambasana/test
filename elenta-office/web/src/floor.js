@@ -18,15 +18,15 @@ const LIB_COLOR = '#9C8CF0';
 const THEMES = {
   dark: {
     background: '#0B0E13', ground: '#0D1117', dots: 'rgba(139,152,169,0.16)',
-    top: '#1A212B', inset: '#1D2530', side: '#121821', table: '#262F3B', pedestal: '#141A22',
+    top: '#1A212B', inset: '#1D2530', side: '#121821', table: '#4A5668', pedestal: '#141A22',
     head: '#D3DBE4', idle: '#4A5566', shelf: '#2A2F3F', bloom: 0.62,
-    hemiSky: '#9BB3CF', hemiGround: '#0B0E13', hemi: 0.75, key: 2.1, ambient: 0.25, offLine: '#5C6878',
+    hemiSky: '#9BB3CF', hemiGround: '#0B0E13', hemi: 0.75, key: 2.1, ambient: 0.25, offLine: '#5C6878', exposure: 1,
   },
   light: {
-    background: '#E6EAF0', ground: '#E4E9EF', dots: 'rgba(60,72,90,0.16)',
-    top: '#F7F9FB', inset: '#EEF2F6', side: '#C9D2DC', table: '#D9E0E8', pedestal: '#AEB8C4',
-    head: '#4C5868', idle: '#9AA6B4', shelf: '#C2C8D6', bloom: 0.22,
-    hemiSky: '#FFFFFF', hemiGround: '#B8C2CE', hemi: 1.1, key: 2.0, ambient: 0.45, offLine: '#8B98A9',
+    background: '#DCE2EA', ground: '#D9DFE7', dots: 'rgba(60,72,90,0.22)',
+    top: '#EEF1F5', inset: '#EEF2F6', side: '#A9B4C2', table: '#C9D1DB', pedestal: '#8C98A8',
+    head: '#3E4A5A', idle: '#7F8C9C', shelf: '#AEB6C6', bloom: 0.12, light: true, exposure: 0.92,
+    hemiSky: '#FFFFFF', hemiGround: '#9AA6B6', hemi: 0.75, key: 1.5, ambient: 0.3, offLine: '#6B7788',
   },
 };
 
@@ -74,7 +74,11 @@ function hexFill(R, facing) {
   return g;
 }
 
+let lightTheme = false;
+// Colour for glowing details: pushed above 1.0 on the dark floor so bloom
+// picks it up; kept as a plain, slightly deeper colour on the light floor.
 function hdr(hex, k) {
+  if (lightTheme) return new THREE.Color(hex).multiplyScalar(0.82);
   return new THREE.Color(hex).multiplyScalar(k);
 }
 
@@ -83,7 +87,7 @@ function dotTexture(color) {
   c.width = 64; c.height = 64;
   const g = c.getContext('2d');
   g.fillStyle = color;
-  g.beginPath(); g.arc(32, 32, 2.2, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(32, 32, 1.5, 0, Math.PI * 2); g.fill();
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 4;
@@ -217,16 +221,17 @@ export function createFloor(container, hooks = {}) {
     // Command
     const hub = layout.hub;
     const bossColor = org.boss ? org.boss.color : STATUS.live;
-    const hubG = platform(hub.R, HUB_H, Math.PI / 4 + Math.PI, bossColor, { rimGain: 1.9, pick: { dept: hub.dept, kind: 'command' } });
+    const hubG = platform(hub.R, HUB_H, Math.PI / 4 + Math.PI, bossColor, { rimGain: 1.35, pick: { dept: hub.dept, kind: 'command' } });
     world.add(hubG);
     const dais = new THREE.Mesh(hexPrism(1.0, 0.12, Math.PI / 4), new THREE.MeshStandardMaterial({ color: theme.side, roughness: 0.7 }));
     dais.position.y = HUB_H; dais.castShadow = true; dais.receiveShadow = true;
-    const daisRim = new THREE.Mesh(hexRing(1.0, 0.05, Math.PI / 4), new THREE.MeshBasicMaterial({ color: hdr(bossColor, 2) }));
+    const daisRim = new THREE.Mesh(hexRing(1.0, 0.05, Math.PI / 4), new THREE.MeshBasicMaterial({ color: hdr(bossColor, 1.4) }));
     daisRim.position.y = HUB_H + 0.125;
-    const halo = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.012, 8, 64), new THREE.MeshBasicMaterial({ color: hdr(bossColor, 2.6) }));
-    halo.rotation.x = Math.PI / 2; halo.position.y = HUB_H + 1.55;
-    const halo2 = new THREE.Mesh(new THREE.TorusGeometry(0.8, 0.008, 8, 64), new THREE.MeshBasicMaterial({ color: hdr(bossColor, 1.6) }));
-    halo2.rotation.x = Math.PI / 2; halo2.position.y = HUB_H + 1.4;
+    const arc = (r, len, k) => new THREE.Mesh(new THREE.TorusGeometry(r, 0.014, 6, 64, len), new THREE.MeshBasicMaterial({ color: hdr(bossColor, k) }));
+    const halo = arc(1.3, Math.PI * 1.4, 1.6);
+    halo.rotation.x = Math.PI / 2; halo.position.y = HUB_H + 0.05;
+    const halo2 = arc(1.45, Math.PI * 0.6, 1.2);
+    halo2.rotation.x = Math.PI / 2; halo2.position.y = HUB_H + 0.05;
     world.add(dais, daisRim, halo, halo2);
     model.halo = [halo, halo2];
     model.bays.set('command', { group: hubG, x: 0, z: 0, R: hub.R, top: HUB_H, dept: hub.dept, kind: 'command' });
@@ -322,8 +327,8 @@ export function createFloor(container, hooks = {}) {
 
     const tableTop = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 0.94, 0.07, 48), new THREE.MeshStandardMaterial({ color: theme.table, roughness: 0.55, metalness: 0.15 }), Math.max(1, clusters.length));
     const tableLeg = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.07, 0.12, 1, 12), new THREE.MeshStandardMaterial({ color: theme.pedestal, roughness: 0.8 }), Math.max(1, clusters.length));
-    const tableRim = new THREE.InstancedMesh(new THREE.RingGeometry(0.9, 1, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({}), Math.max(1, clusters.length));
-    const tableHolo = new THREE.InstancedMesh(new THREE.CircleGeometry(0.42, 6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5, depthWrite: false }), Math.max(1, clusters.length));
+    const tableRim = new THREE.InstancedMesh(new THREE.RingGeometry(0.95, 1, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({}), Math.max(1, clusters.length));
+    const tableHolo = new THREE.InstancedMesh(new THREE.CircleGeometry(0.3, 6).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.35, depthWrite: false }), Math.max(1, clusters.length));
     const m = new THREE.Matrix4(); const q = new THREE.Quaternion(); const v = new THREE.Vector3(); const s = new THREE.Vector3();
     const TABLE_Y = 0.44;
     clusters.forEach(({ c, color, top, dept }, i) => {
@@ -332,11 +337,11 @@ export function createFloor(container, hooks = {}) {
       m.compose(v.set(c.x, top + TABLE_Y / 2, c.z), q, s.set(1, TABLE_Y, 1)); tableLeg.setMatrixAt(i, m);
       m.compose(v.set(c.x, top + TABLE_Y + 0.037, c.z), q, s.set(c.tableR, 1, c.tableR)); tableRim.setMatrixAt(i, m);
       m.compose(v.set(c.x, top + TABLE_Y + 0.04, c.z), q, s.set(c.tableR, 1, c.tableR)); tableHolo.setMatrixAt(i, m);
-      tableRim.setColorAt(i, hdr(color, 1.35));
+      tableRim.setColorAt(i, new THREE.Color(color).multiplyScalar(lightTheme ? 0.75 : 0.6));
       tableHolo.setColorAt(i, new THREE.Color(color).multiplyScalar(0.5));
       const team = c.name;
       const el = h('div', { class: 'lbl lbl-team' }, h('span', { class: 'lbl-team-name' }, team), h('span', { class: 'lbl-team-n' }, String(c.people.length)));
-      addLabel('team', el, new THREE.Vector3(c.x, top + 1.55, c.z), { dept });
+      addLabel('team', el, new THREE.Vector3(c.x, top + 1.12, c.z), { dept });
     });
     [tableTop, tableLeg].forEach((x) => { x.castShadow = true; x.receiveShadow = true; });
     world.add(tableTop, tableLeg, tableRim, tableHolo);
@@ -370,6 +375,7 @@ export function createFloor(container, hooks = {}) {
       model.idx.set(p.id, i);
     });
     bodies.computeBoundingSphere(); heads.computeBoundingSphere();
+    halos.visible = !lightTheme;
     world.add(bodies, heads, rings, halos);
     model.people = people;
     Object.assign(model, { bodies, heads, rings, halos });
@@ -439,7 +445,7 @@ export function createFloor(container, hooks = {}) {
   }
 
   // Height of the view that fits a set of ground circles.
-  function fitHeight(items, pad = 1.12) {
+  function fitHeight(items, pad = 1.05) {
     const { w, h: hh } = size();
     const aspect = w / hh;
     camera.position.copy(view.target).addScaledVector(VIEW_DIR, 120);
@@ -468,7 +474,7 @@ export function createFloor(container, hooks = {}) {
     camera.position.copy(view.target).addScaledVector(VIEW_DIR, 120);
     camera.lookAt(view.target);
     camera.updateMatrixWorld();
-    const pt = new THREE.Vector3(f.cx, f.cy, -120).applyMatrix4(camera.matrixWorld);
+    const pt = new THREE.Vector3(f.cx, f.cy, -120).applyMatrix4(camera.matrixWorld).addScaledVector(VIEW_DIR, 200);
     const ray = new THREE.Ray(pt, VIEW_DIR.clone().negate());
     const hit = new THREE.Vector3();
     ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit);
@@ -687,7 +693,6 @@ export function createFloor(container, hooks = {}) {
       if (!reduceMotion) {
         for (const s2 of model.strips) s2.material.map.offset.x -= dt * 0.55;
         model.halo[0].rotation.z += dt * 0.6; model.halo[1].rotation.z -= dt * 0.35;
-        model.halo[0].position.y = HUB_H + 1.55 + Math.sin(t * 1.4) * 0.04;
       }
       // status rings
       const { rings, halos, people } = model;
@@ -700,7 +705,7 @@ export function createFloor(container, hooks = {}) {
         } else {
           const base = C[st];
           const beat = st === 'working' ? 0.75 + 0.5 * Math.sin((t * 3.2) + i) : st === 'error' ? 1.3 : 1.05;
-          rings.setColorAt(i, tmpC.copy(base).multiplyScalar(reduceMotion ? 1.4 : 1.1 + beat));
+          rings.setColorAt(i, tmpC.copy(base).multiplyScalar((reduceMotion ? 1.4 : 1.1 + beat) * (lightTheme ? 0.5 : 1)));
           if (st === 'working' && !reduceMotion) {
             const p = people[i]; const k = p.lead ? 1.16 : 1;
             const sc = k * (1 + phase * 1.1);
@@ -738,7 +743,7 @@ export function createFloor(container, hooks = {}) {
         const sc = (j === 0 ? 1.15 : 1 - j / (TRAIL + 1));
         tmpM.compose(tmpV, tmpQ.identity(), tmpS.set(sc, sc, sc));
         pulseMesh.setMatrixAt(n, tmpM);
-        pulseMesh.setColorAt(n, tmpC.copy(p.color).multiplyScalar(fade));
+        pulseMesh.setColorAt(n, lightTheme ? tmpC.copy(p.color) : tmpC.copy(p.color).multiplyScalar(fade));
         n++;
       }
     }
@@ -763,7 +768,7 @@ export function createFloor(container, hooks = {}) {
       if (x < -200 || x > w + 200 || y < -100 || y > hh + 100) show = false;
       if (show !== l.shown) { l.el.classList.toggle('is-hidden', !show); l.shown = show; }
       if (show && (x !== l.x || y !== l.y)) {
-        l.el.style.transform = `translate(${x}px, ${y}px) ${l.kind === 'team' || l.kind === 'above' ? 'translate(-50%, calc(-100% - 6px))' : 'translate(-50%, 10px)'}`;
+        l.el.style.transform = `translate(${x}px, ${y}px) ${l.kind === 'above' ? 'translate(-50%, calc(-100% - 6px))' : l.kind === 'team' ? 'translate(-50%, -100%)' : 'translate(-50%, 10px)'}`;
         l.x = x; l.y = y;
       }
     }
@@ -786,6 +791,10 @@ export function createFloor(container, hooks = {}) {
 
   function setTheme(name) {
     theme = THEMES[name] || THEMES.dark;
+    lightTheme = !!theme.light;
+    renderer.toneMappingExposure = theme.exposure;
+    pulseMesh.material.blending = lightTheme ? THREE.NormalBlending : THREE.AdditiveBlending;
+    pulseMesh.material.needsUpdate = true;
     scene.background = new THREE.Color(theme.background);
     ground.material.color.set(theme.ground);
     dots.material.map.dispose();

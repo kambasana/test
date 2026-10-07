@@ -22,7 +22,7 @@ export function normaliseOrg(raw) {
     const key = String(d.key || slug(d.name));
     const boss = !!d.boss;
     const slot = boss ? 0 : paletteIdx++;
-    const color = /^#[0-9a-f]{6}$/i.test(d.color || '') ? d.color : (boss ? '#2DD4BF' : DEPT_PALETTE[slot % DEPT_PALETTE.length]);
+    const color = /^#[0-9a-f]{6}$/i.test(d.color || '') ? d.color : (boss ? '#B7C4D4' : DEPT_PALETTE[slot % DEPT_PALETTE.length]);
     const leadSrc = d.lead || null;
     const lead = leadSrc ? {
       id: uniq(String(leadSrc.id || `${key}-${slug(leadSrc.name || 'lead')}`)),

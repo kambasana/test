@@ -39,8 +39,12 @@ function arrangeBay(teams, outward, minR) {
     c.angle = a;
     // seats spread around the table, starting from the side facing the lead
     const n = c.people.length;
+    // seats go round the table, leaving the side that faces the lead open
     c.seats = c.people.map((p, j) => {
-      const sa = a + Math.PI + ((j + 0.5) * 2 * Math.PI) / Math.max(1, n) - Math.PI / Math.max(1, n);
+      let sa;
+      if (n === 1) sa = a;
+      else if (n === 2) sa = a + Math.PI + (j ? -1 : 1) * (Math.PI * 0.62);
+      else sa = a + Math.PI + Math.PI / n + (j * 2 * Math.PI) / n;
       return { id: p.id, x: c.x + Math.cos(sa) * c.seatR, z: c.z + Math.sin(sa) * c.seatR, face: sa + Math.PI };
     });
   });

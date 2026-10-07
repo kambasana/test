@@ -59,11 +59,13 @@ const shots = [
   { name: 'overview', q: '', wait: 6500 },
   { name: 'department', q: 'focus=military', wait: 6500 },
   { name: 'job', q: 'open=waiting', wait: 4500 },
+  { name: 'job-deliverable', q: 'open=waiting', wait: 4500, scroll: '.jv-main' },
   { name: 'audit', q: 'open=audit', wait: 4500 },
   { name: 'departments', q: 'open=departments', wait: 3500 },
   { name: 'overview-light', q: 'theme=light', wait: 6000 },
   { name: 'overview-off', q: 'off=business', wait: 5000, demoOnly: true },
   { name: 'narrow', q: '', wait: 5000, viewport: { width: 1100, height: 760 }, drawer: 'Work' },
+  { name: 'narrow-org', q: '', wait: 5000, viewport: { width: 820, height: 760 }, drawer: 'Org' },
 ];
 
 const problems = [];
@@ -84,6 +86,10 @@ for (const s of shots) {
     await page.getByRole('button', { name: s.drawer, exact: true }).click();
   }
   await page.waitForTimeout(s.wait);
+  if (s.scroll) {
+    await page.evaluate((sel) => { const el = document.querySelector(sel); if (el) el.scrollTop = el.scrollHeight; }, s.scroll);
+    await page.waitForTimeout(300);
+  }
   const file = path.join(out, `${prefix}${s.name}.png`);
   await page.screenshot({ path: file });
   console.log(`shot ${path.relative(process.cwd(), file)}`);

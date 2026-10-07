@@ -3,6 +3,7 @@ import { h, clear, put } from './dom.js';
 import { state } from './store.js';
 
 export function safeWingUrl(url) {
+  if (!url) return null;
   try {
     const u = new URL(String(url), location.href);
     if (u.protocol !== 'http:' || !['localhost', '127.0.0.1'].includes(u.hostname)) return null;

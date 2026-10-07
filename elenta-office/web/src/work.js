@@ -40,6 +40,13 @@ function progress(job) {
     h('span', { class: 'pg-count mono' }, `${done}/${pieces.length}`));
 }
 
+function cardTitle(job) {
+  const t = String(job.title || '');
+  const text = String(job.text || '').split('\n')[0];
+  if ((!t || /…$|\.\.\.$/.test(t)) && text && text.length <= 200) return text;
+  return t || text;
+}
+
 export function createWork(root, { onSend, onOpen, onFilter }) {
   const cards = new Map();
   let modeValue = 'team';
@@ -123,13 +130,13 @@ export function createWork(root, { onSend, onOpen, onFilter }) {
   function fillCard(btn, job) {
     clear(btn);
     const d = state.org.byKey.get(job.dept);
-    btn.setAttribute('aria-label', `${job.title || job.text}. ${STATE_LABEL[job.state] || job.state}. ${d ? d.name : ''}`);
+    btn.setAttribute('aria-label', `${cardTitle(job)}. ${STATE_LABEL[job.state] || job.state}. ${d ? d.name : ''}`);
     put(btn, 
       h('span', { class: 'job-top' },
         stateChip(job.state),
         h('span', { class: 'job-dept' }, h('span', { class: 'swatch', style: { background: d ? d.color : '#8B98A9' } }), d ? d.name : String(job.dept || '').toUpperCase()),
         h('span', { class: 'job-time mono' }, timeAgo(job.updatedAt || job.createdAt))),
-      h('span', { class: 'job-title' }, job.title || job.text),
+      h('span', { class: 'job-title' }, cardTitle(job)),
       routedLine(job),
       progress(job));
   }

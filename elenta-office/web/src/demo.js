@@ -30,7 +30,7 @@ export function createDemoClient(options = {}) {
   const random = rng(7);
   const offKeys = new Set([...(options.off || []), ...readOff()]);
   const org = clone(DEMO_ORG);
-  for (const d of org.departments) d.on = !offKeys.has(d.key) || d.boss;
+  for (const d of org.departments) d.on = !offKeys.has(d.key) || !!d.boss;
   if (!org.departments.some((d) => d.on && !d.boss)) org.departments.forEach((d) => { d.on = true; });
 
   const deptByKey = new Map(org.departments.map((d) => [d.key, d]));
@@ -126,7 +126,7 @@ export function createDemoClient(options = {}) {
 
   function makeJob({ dept, text, mode }, at = Date.now()) {
     const id = `j-${(seq++).toString(36)}${Math.floor(random() * 1e4).toString(36)}`;
-    const title = text.length > 72 ? `${text.slice(0, 70).replace(/\s+\S*$/, '')}…` : text;
+    const title = text.length > 110 ? `${text.slice(0, 108).replace(/\s+\S*$/, '')}…` : text;
     const job = { id, title, text, dept, mode: mode === 'single' ? 'single' : 'team', state: 'queued', lead: null, pieces: [], output: null, createdAt: iso(at), updatedAt: iso(at), events: [] };
     jobs.set(id, job);
     log({ kind: 'job.created', dept, job: id, agent: 'owner', text: `Job created: ${title}` }, at);
@@ -327,6 +327,16 @@ export function createDemoClient(options = {}) {
       job.pieces.forEach((p) => { if (p.state !== 'done') p.state = 'cancelled'; });
       log({ kind: 'job.cancelled', dept: job.dept, job: id, agent: 'owner', text: 'Cancelled by the owner' });
       touch(job);
+      return ok(job);
+    },
+    revise: (id, note) => {
+      const prev = jobs.get(id);
+      if (!prev || prev.state !== 'rejected') return fail('Only a rejected job can be revised.');
+      const job = makeJob({ dept: prev.dept, text: `${prev.text}\n\nRevise: ${note || prev.note || ''}`.trim(), mode: prev.mode });
+      job.title = `Revise: ${prev.title}`;
+      job.revises = prev.id;
+      emit('job', clone(job));
+      setTimeout(() => start(job), 250);
       return ok(job);
     },
     approvals: () => ok(sorted().filter((j) => j.state === 'waiting_approval')),

@@ -62,6 +62,7 @@ export function createLiveClient() {
       return d && d.job && !d.id ? d.job : d;
     },
     cancel: (id) => call('POST', `/api/jobs/${encodeURIComponent(id)}/cancel`, {}),
+    revise: (id, note) => call('POST', `/api/jobs/${encodeURIComponent(id)}/revise`, { note }),
     approvals: async () => asList(await call('GET', '/api/approvals'), 'approvals', 'jobs'),
     decide: (id, body) => call('POST', `/api/approvals/${encodeURIComponent(id)}`, body),
     audit: async (params) => asList(await call('GET', `/api/audit${qs(params)}`), 'entries', 'audit', 'items'),

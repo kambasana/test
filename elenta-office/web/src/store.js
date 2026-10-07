@@ -34,14 +34,20 @@ export function sortedJobs() {
   return [...state.jobs.values()].sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
 }
 
+function decisionOf(ev) {
+  if (!ev) return '';
+  return String(ev.decision ?? ev.outcome ?? (ev.data && ev.data.decision) ?? '').toLowerCase();
+}
+
+// Was this event / audit entry a refused permission or tool call?
 export function isRefusal(ev) {
-  const d = String(ev && (ev.decision ?? ev.outcome ?? '')).toLowerCase();
-  return /^(reject|rejected|refuse|refused|deny|denied)/.test(d) || ev?.kind === 'refused';
+  const d = decisionOf(ev);
+  if (/^(reject|rejected|refuse|refused|deny|denied)/.test(d)) return true;
+  return ev?.kind === 'refused' || (ev?.kind === 'error' && /^refused\b/i.test(String(ev.text || '')));
 }
 
 export function isAllowed(ev) {
-  const d = String(ev && (ev.decision ?? ev.outcome ?? '')).toLowerCase();
-  return /^(allow|allowed|approve|approved)/.test(d);
+  return /^(allow|allowed|approve|approved)/.test(decisionOf(ev));
 }
 
 const RANK = { idle: 0, working: 1, waiting: 2, error: 3 };

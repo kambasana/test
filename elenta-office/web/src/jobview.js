@@ -8,6 +8,15 @@ import { stateChip, routedLine, pieceTeam } from './work.js';
 
 const KIND_LABEL = { thinking: 'THINKING', tool: 'TOOL', read: 'READ', write: 'WRITE', done: 'DONE', error: 'ERROR', plan: 'PLAN', message: 'SAYS' };
 
+// Servers may shorten titles with an ellipsis; show the request instead of
+// clipped text when it is short enough to read as a heading.
+export function fullTitle(job) {
+  const t = String(job.title || '');
+  const text = String(job.text || '');
+  if ((!t || /…$|\.\.\.$/.test(t)) && text && text.length <= 200) return text.split('\n')[0];
+  return t || text;
+}
+
 export function createJobView({ onDecide, onCancel, onRevise, onFocusPerson }) {
   const dialog = h('dialog', { class: 'sheet sheet-job', 'aria-labelledby': 'jv-title' });
   put(document.body, dialog);
@@ -22,7 +31,7 @@ export function createJobView({ onDecide, onCancel, onRevise, onFocusPerson }) {
 
   function scaffold() {
     clear(dialog);
-    s.title = h('h2', { id: 'jv-title', class: 'sheet-title' });
+    s.title = h('h2', { id: 'jv-title', class: 'sheet-title', tabindex: '-1' });
     s.meta = h('div', { class: 'sheet-meta' });
     const close = h('button', { type: 'button', class: 'btn btn-ghost icon-btn', 'aria-label': 'Close job view' }, '×');
     close.addEventListener('click', () => dialog.close());
@@ -41,7 +50,7 @@ export function createJobView({ onDecide, onCancel, onRevise, onFocusPerson }) {
   }
 
   function renderHead() {
-    s.title.textContent = job.title || job.text;
+    s.title.textContent = fullTitle(job);
     clear(s.meta);
     const d = state.org.byKey.get(job.dept);
     put(s.meta, stateChip(job.state),
@@ -95,7 +104,7 @@ export function createJobView({ onDecide, onCancel, onRevise, onFocusPerson }) {
           who.addEventListener('click', () => onFocusPerson(p.agent));
           return h('li', { class: 'piece' },
             h('div', { class: 'piece-row' },
-              h('div', { class: 'piece-text' }, h('span', { class: 'piece-title' }, p.title || p.text || p.id), h('span', { class: 'piece-who' }, who, p.file ? h('span', { class: 'mono muted' }, ` · out/${p.file}`) : null)),
+              h('div', { class: 'piece-text' }, h('span', { class: 'piece-title' }, p.title || p.text || p.id), h('span', { class: 'piece-who' }, who), p.file ? h('span', { class: 'piece-path mono muted' }, /^out\//.test(p.file) ? p.file : `out/${p.file}`) : null),
               stateChip(p.state === 'working' || p.state === 'running' ? 'working' : p.state),
               fileBtn),
             p.summary ? h('p', { class: 'piece-summary muted small' }, p.summary) : null,
@@ -111,7 +120,7 @@ export function createJobView({ onDecide, onCancel, onRevise, onFocusPerson }) {
     const kind = String(ev.kind || ev.type || 'event');
     const d = state.org.people.get(ev.agent);
     return h('li', { class: `feed-item kind-${kind.replace(/[^a-z_-]/gi, '')}${refused ? ' is-refused' : ''}` },
-      h('span', { class: 'feed-time mono' }, clock(ev.ts || ev.at || ev.time)),
+      h('span', { class: 'feed-time mono' }, clock(ev.ts || ev.t || ev.at || ev.time)),
       h('span', { class: 'feed-body' },
         h('span', { class: 'feed-who' },
           d ? h('span', { class: 'swatch', style: { background: d.dept.color } }) : null,
@@ -143,8 +152,10 @@ export function createJobView({ onDecide, onCancel, onRevise, onFocusPerson }) {
     if (deliverableFor === sig) return;
     deliverableFor = sig;
     put(clear(s.deliverable), h('h3', { class: 'section-title' }, 'Deliverable', h('span', { class: 'mono muted small' }, '  out/deliverable.md')), h('p', { class: 'muted' }, 'Loading…'));
-    let text = null;
-    try { text = await state.client.file(job.id, 'deliverable.md'); } catch { /* fall back below */ }
+    let text = typeof job.deliverable === 'string' && job.deliverable ? job.deliverable : null;
+    if (text == null) {
+      try { text = await state.client.file(job.id, (job.output && job.output.path) || 'deliverable.md'); } catch { /* fall back below */ }
+    }
     if (text == null && job.output) text = typeof job.output === 'string' ? job.output : job.output.text || null;
     if (!job || `${job.id}:${job.state}` !== sig) return;
     put(clear(s.deliverable), h('h3', { class: 'section-title' }, 'Deliverable', h('span', { class: 'mono muted small' }, '  out/deliverable.md')),
@@ -199,6 +210,7 @@ export function createJobView({ onDecide, onCancel, onRevise, onFocusPerson }) {
       deliverableFor = null; eventCount = 0; lastState = null;
       render(true);
       if (!dialog.open) dialog.showModal();
+      s.title.focus();
       try {
         const fresh = await state.client.job(id);
         if (job && job.id === id && fresh) { job = { ...job, ...fresh }; render(true); }
@@ -215,7 +227,7 @@ export function createJobView({ onDecide, onCancel, onRevise, onFocusPerson }) {
       if (!Array.isArray(job.events)) job.events = [];
       const evs = job.events;
       const last = evs[evs.length - 1];
-      if (last && last.ts === ev.ts && last.text === ev.text && last.agent === ev.agent) return;
+      if (last && (last.ts || last.t) === (ev.ts || ev.t) && last.text === ev.text && last.agent === ev.agent) return;
       evs.push(ev);
       renderFeed(false);
     },

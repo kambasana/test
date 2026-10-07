@@ -444,6 +444,7 @@ dialog.sheet::backdrop { background: rgba(4, 6, 9, 0.62); backdrop-filter: blur(
 .audit-table td { padding: 8px 10px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
 .audit-table tr.is-refused td { background: color-mix(in srgb, var(--error) 6%, transparent); }
 .audit-table .detail { overflow-wrap: anywhere; min-width: 260px; }
+.audit-table .block.mono { white-space: nowrap; font-size: 11px; }
 
 /* departments */
 .sheet-depts { width: min(720px, calc(100vw - 32px)); }
@@ -483,15 +484,21 @@ dialog.sheet::backdrop { background: rgba(4, 6, 9, 0.62); backdrop-filter: blur(
   .jv-side { border-left: 0; border-top: 1px solid var(--line); }
   .feed { max-height: 360px; }
 }
-@media (max-width: 760px) {
+@media (max-width: 960px) {
   .top-actions .btn { padding: 6px 8px; }
   .divider, .org-title, .wing-slot { display: none; }
   .brand-name { font-size: 14px; }
+}
+@media (max-width: 760px) {
   .floor-legend { display: none; }
 }
-@media (max-width: 560px) {
-  .brand-name { display: none; }
+@media (max-width: 600px) {
+  .topbar { gap: 6px; padding: 0 8px; }
+  .brand-name, .mode-badge { display: none; }
+  .top-actions .btn, .drawer-btn { padding: 4px 6px; font-size: 12.5px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+.piece-path { font-size: 11.5px; overflow-wrap: anywhere; }
+.sheet-title:focus, .sheet-title:focus-visible { outline: none; }
