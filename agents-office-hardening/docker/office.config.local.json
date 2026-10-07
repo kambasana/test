@@ -1,0 +1,6 @@
+{
+  "tools": { "web": false, "browser": false },
+  "mcp": { "allow": [], "deny": ["Stripe", "Xero"] },
+  "teams": { "enabled": true, "max": 2 },
+  "timeout": 300
+}

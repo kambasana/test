@@ -1,0 +1,10 @@
+# Claude API and login (needed for every agent run)
+.anthropic.com
+claude.ai
+platform.claude.com
+# Add ONLY what your agents need, one per line. Examples (uncomment deliberately):
+# .googleapis.com          # Gmail / Drive / Calendar connectors
+# slack.com
+# .notion.com
+# Web search/fetch go out from Anthropic's side for WebSearch, but WebFetch fetches from here:
+# leaving the web closed is the safest default (set "tools": { "web": false }).

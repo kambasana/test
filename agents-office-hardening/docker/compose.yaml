@@ -1,0 +1,61 @@
+# Tier 2: hardened container + egress allowlist proxy.
+# The office has NO route to the internet: its only network is `internal`, and the only thing on
+# that network that can reach outside is the Squid proxy, which allows a short list of hosts.
+#
+#   export AGENTS_OFFICE_DIR=/path/to/agents-office      # with ../0001-security-hardening.patch applied
+#   mkdir -p secrets && claude setup-token > secrets/claude_oauth_token && chmod 600 secrets/claude_oauth_token
+#   docker compose up --build
+#   open http://localhost:4520
+services:
+  office:
+    build:
+      context: ${AGENTS_OFFICE_DIR:?set AGENTS_OFFICE_DIR to your patched agents-office checkout}
+      dockerfile: ${PWD}/Dockerfile           # run `docker compose` from this folder
+      additional_contexts:
+        hardening: .
+    image: agents-office:hardened
+    # runtime: runsc            # optional: gVisor — a user-space kernel between the agent and the host kernel
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 256
+    mem_limit: 2g
+    cpus: 2
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=256m,uid=1000,gid=1000
+      - /home/node:rw,nosuid,size=256m,uid=1000,gid=1000   # ~/.claude, ~/.claude.json — throwaway, rebuilt each start
+    volumes:
+      - office-data:/app/data                # tasks.json, usage, routine state
+      - ${BRAIN_DIR:-./brain}:/brain         # your notes; mount a COPY first, not your only vault
+    environment:
+      HTTPS_PROXY: http://egress:3128
+      HTTP_PROXY: http://egress:3128
+      NO_PROXY: localhost,127.0.0.1
+    secrets: [claude_oauth_token]
+    ports:
+      - "127.0.0.1:4520:4520"                # loopback on the host only; same port inside and out (the Host check expects it)
+    networks: [internal]
+    depends_on: [egress]
+
+  egress:
+    image: ubuntu/squid:latest
+    volumes:
+      - ./squid.conf:/etc/squid/squid.conf:ro
+      - ./allowed-domains.txt:/etc/squid/allowed-domains.txt:ro
+    networks: [internal, outside]
+    security_opt:
+      - no-new-privileges:true
+
+networks:
+  internal:
+    internal: true                          # no gateway: containers here cannot reach the internet directly
+  outside: {}
+
+volumes:
+  office-data: {}
+
+secrets:
+  claude_oauth_token:
+    file: ./secrets/claude_oauth_token

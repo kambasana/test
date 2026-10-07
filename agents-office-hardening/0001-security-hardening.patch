@@ -1,0 +1,190 @@
+From bc50283499710dab0bce4e79f85e2e177f32793f Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Wed, 7 Oct 2026 12:59:44 +0000
+Subject: [PATCH] Security hardening: loopback bind, origin/host guard, dontAsk
+ agent runs, run-state guard
+
+---
+ check.mjs    | 11 ++++++++++-
+ config.mjs   |  5 +++--
+ onboard.mjs  |  2 +-
+ serve.mjs    | 29 +++++++++++++++++++++++------
+ src/tasks.js |  4 ++--
+ 5 files changed, 39 insertions(+), 12 deletions(-)
+
+diff --git a/check.mjs b/check.mjs
+index 03798a0..a6911a7 100644
+--- a/check.mjs
++++ b/check.mjs
+@@ -4,6 +4,7 @@
+ // Every step prints ✓ or ✗ with the reason; the process exits 1 if anything failed. This is the
+ // loop the Beta was built against: change something, run it, fix what is red, repeat.
+ import { spawn } from 'node:child_process';
++import http from 'node:http';
+ import fs from 'node:fs';
+ import path from 'node:path';
+ import { loadConfig, ROOT } from './config.mjs';
+@@ -513,6 +514,14 @@ else {
+       if (b.status !== 400) throw new Error('bad time accepted');
+       return j.error;
+     });
++    await step('server: another website cannot drive the office', async () => {
++      const post = h => fetch(base + '/api/tasks', { method: 'POST', headers: h, body: '{"dept":"sales","text":""}' }).then(r => r.status);
++      const evil = await post({ 'content-type': 'text/plain', origin: 'https://evil.example' });
++      const plain = await post({ 'content-type': 'text/plain' });
++      const host = await new Promise((ok, no) => http.get(base + '/api/tasks', { headers: { host: 'attacker.example' } }, r => { r.resume(); ok(r.statusCode); }).on('error', no)); // fetch() will not send a foreign Host
++      if (evil !== 403 || plain !== 403 || host !== 403) throw new Error(`cross-origin ${evil} · text/plain ${plain} · foreign Host ${host} (want 403s)`);
++      return 'foreign Origin, non-JSON body and foreign Host all refused';
++    });
+     await step('server: rejects an empty task', async () => { const r = await fetch(base + '/api/tasks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{"dept":"sales","text":""}' }); if (r.status !== 400) throw new Error('status ' + r.status); });
+     if (LIVE) {
+       await step('live: Claude routes a task', async () => {
+@@ -520,7 +529,7 @@ else {
+         if (!r.ok) throw new Error((await r.json()).error); const t = await r.json(); globalThis.__t = t; return `${t.agent} · ${t.title}`;
+       });
+       await step('live: the agent delivers and the note is saved', async () => {
+-        const t = globalThis.__t; if (!t) throw new Error('no task'); const r = await fetch(`${base}/api/tasks/${t.id}/run`, { method: 'POST' });
++        const t = globalThis.__t; if (!t) throw new Error('no task'); const r = await fetch(`${base}/api/tasks/${t.id}/run`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' });
+         if (!r.ok) throw new Error((await r.json()).error); const d = await r.json(); if (d.error) throw new Error(d.result);
+         const notePath = path.join(cfg.brainPath, 'Agents Office', d.note + '.md'); if (!fs.existsSync(notePath)) throw new Error('note not written: ' + notePath);
+         return `${d.result.length} chars · read ${d.read.join(', ')} · ${d.note}.md`;
+diff --git a/config.mjs b/config.mjs
+index 4efa28c..9fd74dc 100644
+--- a/config.mjs
++++ b/config.mjs
+@@ -1,6 +1,6 @@
+ // Agents Office — configuration (Beta).
+ // office.config.json is the shipped default; office.config.local.json (gitignored) overrides it;
+-// environment variables override both: AO_NAME, AO_BRAIN, PORT, AO_MODEL.
++// environment variables override both: AO_NAME, AO_BRAIN, AO_HOST, PORT, AO_MODEL.
+ // V3.1 keys: mcp { allow, deny, departments } · tools { web } · timeout (seconds per agent run) — see mcp.mjs.
+ // V3.2 (16 Sep) keys: tools { browser } (Claude in Chrome for the agents, default on) · teams { enabled, max } (Agent Teams, default on, up to 4 desks) — see teams.mjs.
+ import fs from 'node:fs';
+@@ -16,12 +16,13 @@ function readJSON(p) {
+ export function loadConfig() {
+   const base = readJSON(path.join(ROOT, 'office.config.json'));
+   const local = readJSON(path.join(ROOT, 'office.config.local.json'));
+-  const c = { name: 'Agents Office', brain: './brain', port: 4520, model: 'sonnet', ...base, ...local }; // V3.6: model = sonnet · opus · fable
++  const c = { name: 'Agents Office', brain: './brain', host: '127.0.0.1', port: 4520, model: 'sonnet', ...base, ...local }; // host: loopback only; a container sets AO_HOST=0.0.0.0 and publishes to 127.0.0.1 // V3.6: model = sonnet · opus · fable
+   c.mcp = { allow: [], deny: [], departments: {}, ...(base.mcp || {}), ...(local.mcp || {}) };
+   c.tools = { web: true, browser: true, ...(base.tools || {}), ...(local.tools || {}) }; // V3.2 (16 Sep): browser = Claude in Chrome
+   c.teams = { enabled: true, max: 4, ...(base.teams || {}), ...(local.teams || {}) }; // V3.2 (16 Sep): Agent Teams
+   if (process.env.AO_NAME) c.name = process.env.AO_NAME;
+   if (process.env.AO_BRAIN) c.brain = process.env.AO_BRAIN;
++  if (process.env.AO_HOST) c.host = process.env.AO_HOST;
+   if (process.env.PORT) c.port = +process.env.PORT;
+   if (process.env.AO_MODEL) c.model = process.env.AO_MODEL;
+   c.port = +c.port || 4520;
+diff --git a/onboard.mjs b/onboard.mjs
+index 9323a54..9a49006 100644
+--- a/onboard.mjs
++++ b/onboard.mjs
+@@ -91,7 +91,7 @@ export async function writeUp(answers, ctx) {
+   // the skill → <brain>/Agents Office/skills/<name>/SKILL.md (+ template.md)
+   let skill = null;
+   if (j.skill && typeof j.skill === 'object' && String(j.skill.body || '').trim()) {
+-    const name = String(j.skill.name || `${dept}-job`).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^-|-$/g, '') || `${dept}-job`;
++    const name = String(j.skill.name || `${dept}-job`).toLowerCase().replace(/[^a-z0-9._-]+/g, '-').replace(/^[.-]+|[.-]+$/g, '') || `${dept}-job`; // no leading dots: ".." must not climb out of skills/
+     let bound = (Array.isArray(j.skill.agents) ? j.skill.agents : []).filter(id => ids.has(id));
+     if (!bound.length) bound = [lead.id];
+     const dir = path.join(brainPath, 'Agents Office', 'skills', name);
+diff --git a/serve.mjs b/serve.mjs
+index efd6046..d1829d9 100644
+--- a/serve.mjs
++++ b/serve.mjs
+@@ -128,7 +128,8 @@ async function askX(system, user, { maxTokens = 4000, tools = true, timeout = RU
+   fs.mkdirSync(CLI_CWD, { recursive: true });
+   const allowed = tools ? mcp.allowedTools() : [];
+   const args = ['-p', user, '--output-format', 'stream-json', '--verbose', '--no-session-persistence', '--system-prompt', system,
+-    '--disallowedTools', 'Bash,Edit,Write,Read,Glob,Grep,Agent,NotebookEdit,Task' + (allowed.includes('WebFetch') ? '' : ',WebFetch,WebSearch')];
++    '--disallowedTools', 'Bash,Edit,Write,Read,Glob,Grep,Agent,NotebookEdit,Task' + (allowed.includes('WebFetch') ? '' : ',WebFetch,WebSearch'),
++    '--permission-mode', 'dontAsk']; // only the --allowedTools below run; anything else is denied, whatever defaultMode the owner's own settings carry
+   if (allowed.length) args.push('--allowedTools', allowed.join(','));
+   args.push(...(tools ? mcp.cliArgs() : ['--no-chrome'])); // V3.2 (16 Sep): the owner's Chrome, when tools.browser is on
+   args.push(...modelArgs(model, effort));
+@@ -321,8 +322,9 @@ function writeNote(task) { // the deliverable becomes a note in the brain, linke
+   const name = `${new Date(task.doneAt).toISOString().slice(0, 10)} ${slug(task.title)}`;
+   const body = `---\nagent: ${a.name}\ndepartment: ${DEPTS[a.department].name}\ntask: ${task.id}\ndone: ${new Date(task.doneAt).toISOString()}${task.used?.length ? '\ntools: ' + task.used.join(', ') : ''}${task.skills?.length ? '\nskills: ' + task.skills.join(', ') : ''}${task.routine ? '\nroutine: ' + task.when + (task.late ? ' (late)' : '') : ''}${task.modelUsed ? '\nmodel: ' + modelName(task.modelUsed) + (task.modelFrom && task.modelFrom !== 'office' ? ' (' + task.modelFrom + ')' : '') : ''}${task.effortUsed ? '\neffort: ' + task.effortUsed + (task.effortFrom && task.effortFrom !== 'model' ? ' (' + task.effortFrom + ')' : '') : ''}${task.approved ? '\napproved: ' + new Date(task.approvedAt).toISOString() : ''}${task.team?.pieces?.length ? '\nteam: ' + task.team.pieces.map(p => nameOf(p.agent)).join(', ') : ''}\n---\n` +
+     `# ${task.title}\n\n${task.result}\n\n---\nRead: ${(task.read || []).map(n => `[[${n}]]`).join(' · ') || '—'}\n` + teams.noteExtra(task.team, nameOf);
+-  fs.writeFileSync(path.join(NOTES_DIR, name + '.md'), body);
+-  return name;
++  const file = fs.existsSync(path.join(NOTES_DIR, name + '.md')) ? `${name} ${task.id}` : name; // same title, same day: keep both
++  fs.writeFileSync(path.join(NOTES_DIR, file + '.md'), body);
++  return file;
+ }
+ async function chat(agentId, text, history) {
+   const a = AGENTS.find(x => x.id === agentId); if (!a) throw new Error('unknown agent');
+@@ -448,14 +450,27 @@ async function routinesChat(a, text) {
+ 
+ /* ---------- http ---------- */
+ const json = (res, code, body) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify(body)); };
+-const body = req => new Promise((resolve, reject) => { let s = ''; req.on('data', d => { s += d; }); req.on('end', () => { try { resolve(s ? JSON.parse(s) : {}); } catch (e) { reject(e); } }); });
++const MAX_BODY = 1 << 20; // 1 MB: a task, a chat turn or a routine is never bigger
++const body = req => new Promise((resolve, reject) => { let s = ''; req.on('data', d => { s += d; if (s.length > MAX_BODY) { req.destroy(); reject(new Error('request too large')); } }); req.on('end', () => { try { resolve(s ? JSON.parse(s) : {}); } catch (e) { reject(e); } }); });
+ 
+ await rebuildGraph();
+ const discovering = mcp.discover().then(l => { console.log(`  connectors: ${l.filter(s => s.status === 'connected').length} connected of ${l.length} (claude mcp list)`); return l; });
+ const agentsOut = () => { const setup = setupMap(); return AGENTS.map(a => ({ id: a.id, name: a.name, role: a.role, does: a.does, tools: a.tools, brief: a.brief || '', model: a.model || '', effort: a.effort || '', skills: skills.names(a), lessons: learn.count(BRAIN, a.id), department: a.department, lead: a.lead,
+   interviewer: leadOf(a.department).id === a.id, setUp: setup[a.department] })); };
++// Only this machine's own page may drive the office. The Host check stops DNS rebinding; the Origin
++// check stops any other website from posting tasks, approvals or routines (the agents can send
++// email, post and pay); a JSON body forces a CORS preflight, which this server never answers.
++const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]'].map(h => `${h}:${cfg.port}`));
++function refuse(req) {
++  if (!LOCAL.has(req.headers.host)) return 'host not allowed';
++  const o = req.headers.origin;
++  if (o && !(o.startsWith('http://') && LOCAL.has(o.slice(7)))) return 'origin not allowed';
++  if (req.method === 'POST' && +(req.headers['content-length'] || 0) > 0 && !/^application\/json\b/i.test(req.headers['content-type'] || '')) return 'send JSON';
++  return null;
++}
+ const server = http.createServer(async (req, res) => {
+   const url = new URL(req.url, 'http://x');
++  const why = refuse(req); if (why) return json(res, 403, { error: why });
+   try {
+     if (req.method === 'GET' && (url.pathname === '/' || url.pathname === '/command-centre-v2.html' || url.pathname === '/dark')) {
+       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+@@ -527,6 +542,8 @@ const server = http.createServer(async (req, res) => {
+     if (m && req.method === 'POST' && (m[2] === 'run' || m[2] === 'revise')) {
+       const list = load(); const task = list.find(t => t.id === m[1]);
+       if (!task) return json(res, 404, { error: 'no such task' });
++      if (m[2] === 'run' && (task.state !== 'next' || task.routine || task.dueAt)) return json(res, 409, { error: task.routine || task.dueAt ? 'the office runs this one itself' : `task is ${task.state}` });
++      if (m[2] === 'revise' && task.state !== 'done') return json(res, 409, { error: `task is ${task.state}` });
+       const { feedback } = m[2] === 'revise' ? await body(req) : {};
+       task.state = 'doing'; task.startedAt = Date.now(); save(list);
+       try {
+@@ -568,8 +585,8 @@ const server = http.createServer(async (req, res) => {
+     json(res, 404, { error: 'not found' });
+   } catch (e) { console.error(e); json(res, 500, { error: e.message }); }
+ });
+-server.listen(cfg.port, () => {
+-  console.log(`Agents Office ${version} → http://localhost:${cfg.port}`);
++server.listen(cfg.port, cfg.host, () => {
++  console.log(`Agents Office ${version} → http://localhost:${cfg.port}${cfg.host === '127.0.0.1' ? '' : '   (listening on ' + cfg.host + ')'}`);
+   console.log(`  business: ${cfg.name}   brain: ${BRAIN} (${graph.notes} notes, ${graph.links.length} links)   claude: ${backend} · ${modelName(cfg.model)}${cfg.effort ? ' · effort ' + cfg.effort : ''} by default (routing on Sonnet)`);
+   getUsage(true).then(u => console.log(u.source === 'claude' ? `  usage: session ${u.session?.percent ?? '—'}% · week ${u.week?.percent ?? '—'}% (your Claude plan, as Claude Code shows it)` : `  usage: Claude's gauge unavailable (${u.reason}) — showing the office's own count`)).catch(() => {});
+   console.log(`  tasks: ${FILE}   notes the agents write: ${NOTES_DIR}`);
+diff --git a/src/tasks.js b/src/tasks.js
+index 5f39f76..3fdfd74 100644
+--- a/src/tasks.js
++++ b/src/tasks.js
+@@ -567,7 +567,7 @@ export function initTasks(ctx) {
+     if (!agentOf(st.agent)) return;
+     let t = tasks.find(x => x.live && x.sid === st.id);
+     if (!t) {
+-      t = mk({ agent: st.agent, title: st.title, text: st.text, plan: st.plan, by: st.by === 'routine' ? 'routine' : 'you', live: true, srv: !!st.routine, sid: st.id,
++      t = mk({ agent: st.agent, title: st.title, text: st.text, plan: st.plan, by: st.by === 'routine' ? 'routine' : 'you', live: true, srv: !!(st.routine || st.dueAt), sid: st.id,
+         routine: st.routine, when: st.when, late: !!st.late, due: st.due, needsOk: !!st.needsOk, addedAt: st.addedAt, changedAt: st.addedAt, last: 'added',
+         model: st.model, modelUsed: st.modelUsed || st.model || undefined, modelFrom: st.modelFrom || (st.model ? 'task' : undefined), effort: st.effort, effortUsed: st.effortUsed, effortFrom: st.effortFrom });
+       if (st.state === 'scheduled') { t.state = 'scheduled'; t.dueAt = st.dueAt; t.needsOk = !!st.needsOk; }
+@@ -610,7 +610,7 @@ export function initTasks(ctx) {
+   function apply(t, st) {
+     if (st.team) syncTeam(t, st);
+     if (st.state === 'scheduled') { if (t.state !== 'scheduled') { t.state = 'scheduled'; t.dueAt = st.dueAt; touch(t, 'scheduled'); } else if (t.dueAt !== st.dueAt) { t.dueAt = st.dueAt; dirty = true; } return; }
+-    if (t.state === 'scheduled' && st.state !== 'scheduled') { t.state = 'next'; t.addedAt = st.addedAt || Date.now(); t.late = !!st.late; t.due = st.due; touch(t, 'added'); spawnEmote(R[t.agent], '⏱'); feedPush(R[t.agent], '⏱', `Scheduled task fired: ${t.title}${t.late ? ' (late)' : ''}`); if (calendar) calendar.refresh(); }
++    if (t.state === 'scheduled' && st.state !== 'scheduled') { t.state = 'next'; t.srv = true; t.addedAt = st.addedAt || Date.now(); t.late = !!st.late; t.due = st.due; touch(t, 'added'); spawnEmote(R[t.agent], '⏱'); feedPush(R[t.agent], '⏱', `Scheduled task fired: ${t.title}${t.late ? ' (late)' : ''}`); if (calendar) calendar.refresh(); }
+     if (st.state === 'doing' && t.state !== 'doing') {
+       t.state = 'doing'; t.startedAt = performance.now() - Math.max(0, Date.now() - (st.startedAt || Date.now())); t.progress = 0; t.pausedAt = null; t.running = true; t.ready = false; t.srv = true; t.changedAt = st.startedAt || Date.now(); touch(t, 'started');
+     } else if (st.state === 'waiting' && t.draftAt !== st.waitingAt) { // a new draft is waiting for the OK (the first, or a rework after REJECT)
+-- 
+2.43.0
+
