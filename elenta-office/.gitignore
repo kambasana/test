@@ -5,3 +5,4 @@ deliverables/
 settings.local.json
 web/dist/
 *.log
+.probe/

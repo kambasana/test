@@ -1,0 +1,18 @@
+{
+  "org": "elenta",
+  "library": "library",
+  "host": "127.0.0.1",
+  "port": 4180,
+  "dataDir": "data",
+  "workDir": "work",
+  "deliverablesDir": "deliverables",
+  "team": { "max": 6 },
+  "concurrency": 4,
+  "timeoutSec": 600,
+  "tools": { "webSearch": false },
+  "model": null,
+  "allowedHosts": [],
+  "wing": "Elenta HQ",
+  "wings": [],
+  "departments": {}
+}

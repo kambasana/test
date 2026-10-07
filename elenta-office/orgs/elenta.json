@@ -1,0 +1,106 @@
+{
+  "title": "Elenta",
+  "departments": [
+    {
+      "key": "boss",
+      "name": "BOSS",
+      "boss": true,
+      "about": "Reads every incoming request, decides which department owns it and hands it over with a reason.",
+      "lead": {
+        "id": "boss",
+        "name": "BOSS",
+        "role": "Head of the office",
+        "does": "Weighs each request against what the departments own and sends it to the one best placed to deliver it."
+      },
+      "teams": [
+        {
+          "name": "OFFICE OF THE BOSS",
+          "people": [
+            {
+              "id": "chief-of-staff",
+              "name": "CHIEF OF STAFF",
+              "role": "Keeps the Boss's desk in order",
+              "does": "Drafts short briefs and status notes for the Boss and handles requests that belong to no department."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "military",
+      "name": "MILITARY",
+      "color": "#C9A227",
+      "about": "Owns all defence-domain work: software for military systems, its documents, engineering analysis and compliance checks.",
+      "lead": {
+        "id": "mil-lead",
+        "name": "MILITARY LEAD",
+        "role": "Programme lead for defence work",
+        "does": "Splits defence requests across the sub-teams, checks the pieces fit together and signs off one combined result."
+      },
+      "teams": [
+        {
+          "name": "SOFTWARE",
+          "people": [
+            { "id": "mil-sw-engineer", "name": "SOFTWARE ENGINEER", "role": "Writes and reviews embedded and ground-station code", "does": "Designs modules, writes code and unit tests, and reviews changes against the code review checklist." },
+            { "id": "mil-test-engineer", "name": "TEST ENGINEER", "role": "Plans and specifies verification", "does": "Writes test plans, test cases and acceptance criteria, using the test-plan template." },
+            { "id": "mil-firmware", "name": "FIRMWARE DEVELOPER", "role": "Low-level device software", "does": "Works on drivers, timing, storage and power behaviour of embedded devices such as data loggers." }
+          ]
+        },
+        {
+          "name": "DOCUMENTATION",
+          "people": [
+            { "id": "mil-writer", "name": "TECHNICAL WRITER", "role": "Turns engineering work into clear documents", "does": "Writes manuals, plans and reports in house style using the document template." },
+            { "id": "mil-config", "name": "CONFIGURATION MANAGER", "role": "Keeps documents and baselines under control", "does": "Assigns document numbers, tracks versions and keeps change records consistent." }
+          ]
+        },
+        {
+          "name": "ANALYSIS",
+          "people": [
+            { "id": "mil-req-analyst", "name": "REQUIREMENTS ANALYST", "role": "Owns requirements and traceability", "does": "Writes clear, testable requirements and keeps traceability between requirements, design and tests." },
+            { "id": "mil-sys-analyst", "name": "SYSTEMS ANALYST", "role": "Looks at the system as a whole", "does": "Studies interfaces, failure modes and performance budgets, and states assumptions openly." }
+          ]
+        },
+        {
+          "name": "COMPLIANCE",
+          "people": [
+            { "id": "mil-export", "name": "EXPORT CONTROL OFFICER", "role": "Screens work for export rules", "does": "Checks deliverables against the export-screening checklist and flags anything that needs a licence review." },
+            { "id": "mil-qa", "name": "QUALITY ASSURANCE", "role": "Checks work against standards", "does": "Reviews documents and plans for completeness, consistency and conformance with the house rules." }
+          ]
+        }
+      ]
+    },
+    {
+      "key": "business",
+      "name": "BUSINESS",
+      "color": "#5B8DEF",
+      "about": "Owns the running of the company: money, contracts, purchasing and office administration.",
+      "lead": {
+        "id": "biz-lead",
+        "name": "BUSINESS LEAD",
+        "role": "Head of business operations",
+        "does": "Splits business requests across finance, contracts and admin and delivers one combined answer."
+      },
+      "teams": [
+        {
+          "name": "FINANCE",
+          "people": [
+            { "id": "biz-accountant", "name": "ACCOUNTANT", "role": "Books, invoices and payments", "does": "Prepares invoices, checks payments and keeps the books tidy using the invoice checklist." },
+            { "id": "biz-fin-analyst", "name": "FINANCIAL ANALYST", "role": "Budgets and forecasts", "does": "Builds budgets, cost estimates and simple forecasts, and explains the numbers in plain words." }
+          ]
+        },
+        {
+          "name": "CONTRACTS",
+          "people": [
+            { "id": "biz-contracts", "name": "CONTRACTS MANAGER", "role": "Drafts and reviews agreements", "does": "Reviews contract terms against the contract review checklist and drafts plain-language summaries." }
+          ]
+        },
+        {
+          "name": "ADMIN",
+          "people": [
+            { "id": "biz-office-manager", "name": "OFFICE MANAGER", "role": "Keeps the office running", "does": "Handles purchasing, schedules, records and supplier contacts." }
+          ]
+        }
+      ]
+    }
+  ]
+}
