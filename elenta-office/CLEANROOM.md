@@ -8,11 +8,13 @@ commercial use without permission.
 
 1. **Specification.** `SPEC.md` was written by the reviewing session. It describes behaviour, ideas and
    a new visual design in fresh wording. It contains no source code, text, data, names, layouts,
-   colours or assets from Agents Office. The ideas it shares with that product (an isometric office
-   of agents, departments, a notes library) are general concepts; the structure added on top
+   colours or assets from Agents Office. Multi-agent "virtual office" and
+   "virtual company" designs (role-based agent teams, managers that delegate, a shared memory, a
+   visual world the agents work in) are common, published patterns, e.g. ChatDev, MetaGPT and the
+   Generative Agents town (Park et al., 2023). Elenta Office uses those general ideas. Its own design
    (domain departments with sub-teams, Boss routing, whole-department team jobs, ACP-based runs with
-   a client-side permission policy, approval-gated deliverables, audit log, wings, sandbox kit) was
-   designed in this project.
+   a client-side permission policy, approval-gated deliverables, audit log, wings, sandbox kit, and
+   its visual identity) was designed in this project.
 2. **Implementation.** The code was written by separate implementation agents that were given only
    `SPEC.md`, public documentation (Node.js, three.js, Agent Client Protocol, Claude Code) and public
    packages. They were instructed not to open the Agents Office repository, its local clone, any
