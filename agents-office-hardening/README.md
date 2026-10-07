@@ -16,11 +16,13 @@ Contents:
   Everything gets contact shadows. Chairs, people and desks get more detail, materials get a faint
   studio light, and connection lines stay quiet until used. Before and after: board P7 on the
   design canvas. The check suite result is unchanged (35 of 36).
-- `0003-departments.patch`: your own departments, applied on top of 0002. Switch departments on
-  and off, swap what fills the floor (a *pack*, such as the included R&D lab), and run *wings*
-  (separate offices) that link to each other. See "Departments, packs and wings" below and board
-  P8 on the design canvas. `node check.mjs` passes 39 of 40, with four new checks; the one failure
-  is still the Chrome smoke test.
+- `0003-departments.patch`: your own departments, applied on top of 0002. An org file
+  (`orgs/<name>.json`) replaces AJ's six departments entirely: any number of departments, each
+  owning a domain of work, made of sub-teams of people. Pick a department and the whole department
+  works the job, split by sub-team; or give it to the Boss, who picks the department. Departments
+  switch on and off, and *wings* (separate offices) link to each other. `orgs/elenta.json` is a
+  draft to edit. See "Your departments" below and board P8 on the design canvas. `node check.mjs`
+  passes 41 of 42 (the Chrome smoke test still can't run here).
 - `PLAN.md`: the build plan and the launch scenario.
 - `docker/`: two ways to run the office in isolation, a Docker Sandboxes microVM (tier 1) or a
   hardened Compose stack (tier 2), plus `sbx-wing.sh` to run a wing in its own microVM.
@@ -164,21 +166,41 @@ npx @anthropic-ai/sandbox-runtime node serve.mjs
 Allow writes only to the repo, the notes folder, `~/.claude` and the temp directory. Allow network
 access only to Anthropic's hosts.
 
-## Departments, packs and wings
+## Your departments
 
-The upstream office is fixed at six departments and 35 desks, set up as an agency. The floor
-geometry (six positions around the brain) is hand-tuned, so the patch keeps the positions and
-makes what sits in them yours.
+Without an org file the office is AJ's agency, unchanged. With `"org": "elenta"` in the settings
+(or `AO_ORG=elenta`), it is built only from `orgs/elenta.json`:
 
-| Level | How | What happens |
+```
+{ "title": "Elenta",
+  "departments": [
+    { "key": "boss", "name": "BOSS", "boss": true, "about": "…", "lead": { "name": "BOSS" }, "teams": [ … ] },
+    { "key": "military", "name": "MILITARY",
+      "about": "all military-domain work: code, documents, analysis, compliance",
+      "lead": { "name": "MILITARY LEAD", "role": "…", "does": "…" },
+      "teams": [ { "name": "SOFTWARE", "people": [ { "name": "SOFTWARE ENGINEER", "role": "…", "does": "…", "tasks": ["…"] } ] },
+                 { "name": "DOCUMENTATION", "people": [ … ] } ] } ] }
+```
+
+| You want | You do | What happens |
 |---|---|---|
-| Switch off | ▦ DEPARTMENTS in the top bar, or `"departments": { "emails": { "on": false } }` | The pod becomes a dashed outline with its name. No desks, no tasks, no runs; the server refuses work sent to it. Notes stay in the brain. At least one department stays on. |
-| Swap (pack) | Pick a pack in the panel, or `"pack": "rnd-lab"` | `packs/<name>.json` renames each position, recolours it, picks its prop and gives every desk a name, role, tasks, chat chips and screen lines. Desks map in order onto the position's seats, lead first; a pack with fewer desks leaves the rest out. |
-| Wing | `docker/sbx-wing.sh`, and `"wings": [...]` in each office's settings | A wing is a second office with its own copy of the code, brain folder, tasks, settings, port and sandbox. The top bar links the offices; nothing else is shared. |
+| A department does a job | Pick it in the task bar | TEAM is on by default: the lead splits the job by sub-team (code to Software, the write-up to Documentation…), the parts run at the same time, and the lead combines them. Switch TEAM off to give it to one person. |
+| Let the Boss decide | Pick BOSS | The Boss reads each department's `about` line and hands the job to the one whose domain it is, saying why. Then the whole department works it, as above. |
+| Grow a department | Add people or a sub-team in the file | The pod grows to fit (2 to 4 desks across, a row per sub-team), and the ring of departments spreads out. Up to 12 departments, 30 people a department, 150 in all. |
+| Switch one off | ▦ DEPARTMENTS in the top bar, or `"departments": { "business": { "on": false } }` | A dashed outline with its name stays. No desks, no tasks, no runs; the Boss stops routing to it and the server refuses work for it. |
+| Wall one off | Run it as a wing (`docker/sbx-wing.sh`) | A separate office: its own copy of the code, brain, tasks, settings, port and sandbox, with its own boss. The top bar links the offices; nothing else is shared. |
 
-Changes saved from the panel go to that office's own settings file and take effect on restart.
-Environment variables `AO_PACK`, `AO_OFF`, `AO_CONFIG` (a different settings file) and `AO_DATA`
-(a different task folder) override the files.
+The org file is checked when the office starts: bad keys, duplicate ids, a second boss, bad
+colours and anything over the limits are reported and left out, never half-applied. In an org
+office, edits to people go in that office's `brain/Agents Office/agents.json`; AJ's
+`office.agents*.json` describe his seats and are skipped. Environment variables `AO_ORG`,
+`AO_OFF`, `AO_CONFIG` (a different settings file) and `AO_DATA` (a different task folder) override
+the files.
+
+**Tested here:** layout (no pods overlap), Boss routing and whole-department teams in demo mode,
+switching off, the panel and the API. **Not tested here:** live Boss routing and team runs through
+Claude, because this cloud session has no Claude login. Run `CHECK_LIVE=1 node check.mjs` on your
+machine.
 
 **Isolation notes for a wing:**
 
@@ -188,9 +210,6 @@ Environment variables `AO_PACK`, `AO_OFF`, `AO_CONFIG` (a different settings fil
   build time, whatever brain the server used. With wings, that would have shown one office's note
   titles in another. An empty brain now stays empty.
 - **Its own network rules**, with web search and Chrome off by default.
-- **Pack edits live in the brain.** In a pack office, `office.agents.json` and
-  `office.agents.local.json` describe the agency's seats and are skipped; edits go in that
-  office's `brain/Agents Office/agents.json`.
 
 **What a wing can hold.** Every agent run sends its prompt and the notes it reads to Claude's API.
 A sandbox controls what the agents can reach, not where the work is processed. Keep

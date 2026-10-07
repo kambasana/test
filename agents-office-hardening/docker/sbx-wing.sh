@@ -3,7 +3,7 @@
 # It shares nothing with the main office: its own copy of the code, brain folder, task file,
 # config, sandbox, network rules and port. The two offices only link to each other in the top bar.
 #
-#   WING=rnd PACK=rnd-lab PORT=4521 BRAIN=~/office-brains/rnd ./sbx-wing.sh
+#   WING=military ORG=elenta-military PORT=4521 BRAIN=~/office-brains/military ./sbx-wing.sh
 #
 # Run it from the main agents-office checkout (hardening + departments patches applied).
 # Requires sbx: macOS on Apple silicon, Windows 11, or Linux with KVM (Ubuntu 24.04+).
@@ -13,7 +13,7 @@
 # must not go into an office like this, sandbox or not; that needs an approved deployment.
 set -euo pipefail
 WING=${WING:?name the wing, e.g. WING=rnd}
-PACK=${PACK:-agency}
+ORG=${ORG:-}   # a file in orgs/ (without .json); empty = AJ's six departments
 PORT=${PORT:-4521}
 BRAIN=${BRAIN:?give the wing its own brain folder, e.g. BRAIN=~/office-brains/$WING}
 case "$WING" in *[!a-z0-9-]*) echo "WING: lower-case letters, digits and dashes only" >&2; exit 1;; esac
@@ -29,7 +29,7 @@ mkdir -p "$APP"
 rsync -a --delete --exclude brain/ --exclude data/ --exclude wings/ --exclude node_modules/ \
   --exclude 'office.config.local.json' --exclude 'office.agents.local.json' --exclude '*.log' ./ "$APP/"
 cat > "$APP/office.config.local.json" <<JSON
-{ "name": "$WING wing", "pack": "$PACK", "wing": "$(echo "$WING" | tr a-z A-Z)",
+{ "name": "$WING wing", "org": "$ORG", "wing": "$(echo "$WING" | tr a-z A-Z)",
   "wings": [{ "name": "MAIN OFFICE", "url": "http://localhost:4520" }],
   "tools": { "web": false, "browser": false } }
 JSON
@@ -51,7 +51,7 @@ sbx exec -d "$NAME" bash -lc "cd '$APP' && AO_BRAIN='$BRAIN' AO_HOST=0.0.0.0 POR
 sbx ports "$NAME" --publish "$PORT:$PORT"
 
 cat <<MSG
-Wing "$WING": http://localhost:$PORT   (pack: $PACK · brain: $BRAIN · code: $APP)
+Wing "$WING": http://localhost:$PORT   (org: ${ORG:-agency} · brain: $BRAIN · code: $APP)
 Link to it from the main office's office.config.local.json:
   "wings": [{ "name": "$(echo "$WING" | tr a-z A-Z)", "url": "http://localhost:$PORT" }]
 Denied requests: sbx policy log    Stop: sbx stop $NAME && sbx rm $NAME

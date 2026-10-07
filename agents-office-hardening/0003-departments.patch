@@ -1,49 +1,77 @@
 diff --git a/check.mjs b/check.mjs
-index a6911a7..41aaaac 100644
+index a6911a7..6fee9d9 100644
 --- a/check.mjs
 +++ b/check.mjs
-@@ -52,6 +52,30 @@ await step('roster: bad edits are refused, not applied', async () => {
+@@ -52,6 +52,49 @@ await step('roster: bad edits are refused, not applied', async () => {
    if (n.name !== 'PODCAST NOTES' || n.department !== 'marketing' || n.lead) throw new Error('validation let a fixed field through');
    if (r.problems.length < 4) throw new Error('expected four problems, got ' + r.problems.length);
  });
-+/* ---------- 1c. departments: packs, on/off (each in its own process: the office is read once at start) ---------- */
-+const officeProbe = env => sh('node', ['--input-type=module', '-e', `import './office.mjs'; const d = await import('./src/data.js'); const { loadRoster } = await import('./roster.mjs'); const r = loadRoster(); console.log(JSON.stringify({ keys: d.DEPT_KEYS, n: d.AGENTS.length, names: Object.fromEntries(d.DEPT_KEYS.map(k => [k, d.DEPTS[k].name])), roster: r.agents.length, first: r.agents[0], layout: Object.keys(d.LAYOUT), problems: globalThis.OFFICE.problems }))`], { env: { ...process.env, AO_CONFIG: '/nonexistent.json', ...env } }).then(o => JSON.parse(o.trim().split('\n').pop()));
-+await step('departments: a pack fills the six slots', async () => {
-+  const o = await officeProbe({ AO_PACK: 'rnd-lab' });
-+  if (o.names.emails !== 'RESEARCH' || o.names.ops !== 'SECURITY & COMPLIANCE') throw new Error('pack names not applied: ' + JSON.stringify(o.names));
-+  if (o.n !== 35 || o.roster !== 35) throw new Error(`seats: floor ${o.n}, roster ${o.roster}`);
-+  if (o.first.name !== 'RESEARCH LEAD' || !o.first.role) throw new Error('roster kept the agency seat: ' + o.first.name);
-+  if (o.problems.length) throw new Error(o.problems.join(' | '));
-+  return 'rnd-lab: ' + Object.values(o.names).join(' · ');
++/* ---------- 1c. your departments: an org file, on/off (each in its own process: the office is read once at start) ---------- */
++const officeProbe = env => sh('node', ['--input-type=module', '-e', `import './office.mjs'; const d = await import('./src/data.js'); const { loadRoster } = await import('./roster.mjs'); const r = loadRoster(); console.log(JSON.stringify({ keys: d.DEPT_KEYS, n: d.AGENTS.length, names: Object.fromEntries(d.DEPT_KEYS.map(k => [k, d.DEPTS[k].name])), boss: d.DEPT_KEYS.filter(k => d.DEPTS[k].boss), layout: Object.fromEntries(Object.entries(d.LAYOUT).map(([k, L]) => [k, [L.pos, L.w, L.d]])), roster: r.agents.length, teams: [...new Set(r.agents.map(a => a.team).filter(Boolean))], rosterProblems: r.problems, problems: globalThis.OFFICE.problems }))`], { env: { ...process.env, AO_CONFIG: '/nonexistent.json', AO_ORG: '', ...env } }).then(o => JSON.parse(o.trim().split('\n').pop()));
++await step('departments: an org file builds the whole office (no agency left)', async () => {
++  const o = await officeProbe({ AO_ORG: 'elenta' });
++  if (o.keys.join() !== 'boss,military,business') throw new Error('departments: ' + o.keys.join());
++  if (o.n !== 16 || o.roster !== 16) throw new Error(`people: floor ${o.n}, roster ${o.roster} (want 16)`);
++  if (o.boss.join() !== 'boss') throw new Error('boss: ' + o.boss.join());
++  if (!['SOFTWARE', 'DOCUMENTATION', 'ANALYSIS', 'COMPLIANCE'].every(t => o.teams.includes(t))) throw new Error('sub-teams: ' + o.teams.join());
++  if (o.problems.length || o.rosterProblems.length) throw new Error([...o.problems, ...o.rosterProblems].join(' | '));
++  return Object.values(o.names).join(' · ') + ' · ' + o.teams.length + ' sub-teams';
 +});
-+await step('departments: switched-off slots leave the floor and the roster', async () => {
-+  const o = await officeProbe({ AO_OFF: 'emails,fin' });
-+  if (o.keys.join() !== 'sales,marketing,ops,delivery') throw new Error('keys: ' + o.keys.join());
-+  if (o.n !== 26 || o.roster !== 26) throw new Error(`agents: floor ${o.n}, roster ${o.roster} (want 26)`);
-+  if (o.layout.includes('emails') || o.layout.includes('fin')) throw new Error('layout still has a switched-off pod');
-+  return '26 agents on 4 pods';
++await step('departments: generated pods never overlap each other or the brain', async () => {
++  const o = await officeProbe({ AO_ORG: 'elenta' });
++  const box = ([[x, z], w, d]) => [x - w / 2, x + w / 2, z - d / 2, z + d / 2];
++  const ks = Object.keys(o.layout);
++  for (let i = 0; i < ks.length; i++) for (let j = i + 1; j < ks.length; j++) {
++    const a = box(o.layout[ks[i]]), b = box(o.layout[ks[j]]);
++    if (a[0] < b[1] && b[0] < a[1] && a[2] < b[3] && b[2] < a[3]) throw new Error(`${ks[i]} overlaps ${ks[j]}`);
++  }
++  return ks.length + ' pods clear';
 +});
-+await step('departments: bad packs and all-off are refused, not applied', async () => {
-+  const a = await officeProbe({ AO_PACK: '../../etc/passwd' });
-+  if (a.names.emails !== 'EMAILS' || !a.problems.length) throw new Error('a bad pack name was used');
-+  const b = await officeProbe({ AO_OFF: 'emails,sales,marketing,ops,fin,delivery' });
++await step('departments: switched-off departments leave the floor and the roster', async () => {
++  const a = await officeProbe({ AO_OFF: 'emails,fin' });
++  if (a.keys.join() !== 'sales,marketing,ops,delivery' || a.n !== 26 || a.roster !== 26) throw new Error(`agency: ${a.keys.join()} · ${a.n}/${a.roster}`);
++  const b = await officeProbe({ AO_ORG: 'elenta', AO_OFF: 'business' });
++  if (b.keys.join() !== 'boss,military' || b.n !== 12) throw new Error(`org: ${b.keys.join()} · ${b.n}`);
++  return 'agency 26 on 4 pods · org 12 on 2 pods';
++});
++await step('departments: a bad org and all-off are refused, not applied', async () => {
++  const a = await officeProbe({ AO_ORG: '../../etc/passwd' });
++  if (a.keys.length !== 6 || !a.problems.length) throw new Error('a bad org name was used');
++  const b = await officeProbe({ AO_ORG: 'elenta', AO_OFF: 'boss,military,business' });
 +  if (b.keys.length !== 1) throw new Error('every department went off');
 +  return a.problems[0].slice(0, 60) + '…';
++});
++await step('teams: the lead is told to split by sub-team when the department has them', async () => {
++  const t = await import('./teams.mjs');
++  const seats = [{ id: 'l', lead: true, name: 'LEAD', role: 'r', does: 'd', team: '' }, { id: 's', name: 'DEV', role: 'r', does: 'd', team: 'SOFTWARE' }];
++  const { user } = t.planPrompt({ business: 'x', deptName: 'MILITARY', lead: seats[0], seats, text: 'y', max: 6 });
++  if (!user.includes('sub-team SOFTWARE') || !user.includes('give each piece to the sub-team')) throw new Error('no sub-team in the plan prompt');
++  if (t.settings({ teams: { max: 8 } }).max !== 8) throw new Error('max 8 not allowed');
++  return 'sub-teams named · up to 8 pieces';
 +});
  await step('roster: brief is accepted and trimmed', async () => {
    const { validate } = await import('./roster.mjs');
    const r = validate({ agents: [{ id: 'piper', brief: ['Three tiers.', 'Never discount.'] }, { id: 'lexi', brief: 'x'.repeat(2500) }] });
-@@ -514,6 +538,14 @@ else {
+@@ -248,7 +291,7 @@ await step('teams: the sentence says team, the plan is checked against the seats
+   if (m.messages.length !== 2 || m.messages[0].to !== 'newt' || m.messages[1].to !== 'lead' || !/@nobody/.test(m.body) || /@newt/.test(m.body)) throw new Error('messages: ' + JSON.stringify(m));
+   const sec = t.teamSection({ me: { id: 'ada' }, lead, pieces: plan.pieces, nameOf: id => id.toUpperCase() });
+   if (!/Your piece: A/.test(sec) || !/NEWT: N/.test(sec) || !/@lead|@newt/.test(sec)) throw new Error('team section: ' + sec.slice(0, 200));
+-  const st = t.settings({ teams: { max: 99 } }); if (st.max !== 6 || !st.enabled) throw new Error('settings clamp: ' + JSON.stringify(st));
++  const st = t.settings({ teams: { max: 99 } }); if (st.max !== 8 || !st.enabled) throw new Error('settings clamp: ' + JSON.stringify(st));
+   if (t.settings({ teams: { enabled: false } }).enabled) throw new Error('enabled false ignored');
+   const extra = t.noteExtra({ pieces: [{ agent: 'ada', title: 'A', result: 'r' }], messages: [{ from: 'ada', to: 'lead', text: 'x' }] }, id => id.toUpperCase());
+   if (!/## Team/.test(extra) || !/ADA → lead: x/.test(extra) || !/### ADA — A\nr/.test(extra)) throw new Error('note extra: ' + extra);
+@@ -514,6 +557,14 @@ else {
        if (b.status !== 400) throw new Error('bad time accepted');
        return j.error;
      });
 +    await step('server: departments are listed, and a bad change is refused', async () => {
 +      const d = await fetch(base + '/api/departments').then(r => r.json());
-+      if (d.slots.length !== 6 || !d.packs.some(p => p.name === 'rnd-lab')) throw new Error('listing: ' + JSON.stringify(d).slice(0, 120));
++      if (!d.slots.length || !d.orgs.some(p => p.name === 'elenta')) throw new Error('listing: ' + JSON.stringify(d).slice(0, 120));
 +      const post = b => fetch(base + '/api/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(b) }).then(r => r.status);
-+      if (await post({ pack: '../x' }) !== 400) throw new Error('an unknown pack was accepted');
++      if (await post({ org: '../x' }) !== 400) throw new Error('an unknown org was accepted');
 +      if (await post({ off: ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery'] }) !== 400) throw new Error('all-off was accepted');
-+      return `${d.slots.filter(s => s.on).length} of 6 on · packs: ${d.packs.map(p => p.name).join(', ')}`;
++      return `${d.slots.filter(s => s.on).length} of ${d.slots.length} on · orgs: ${d.orgs.map(p => p.name || 'agency').join(', ')}`;
 +    });
      await step('server: another website cannot drive the office', async () => {
        const post = h => fetch(base + '/api/tasks', { method: 'POST', headers: h, body: '{"dept":"sales","text":""}' }).then(r => r.status);
@@ -76,213 +104,211 @@ index 9fd74dc..a58e51a 100644
    c.tools = { web: true, browser: true, ...(base.tools || {}), ...(local.tools || {}) }; // V3.2 (16 Sep): browser = Claude in Chrome
 diff --git a/office.mjs b/office.mjs
 new file mode 100644
-index 0000000..f86a015
+index 0000000..929dad9
 --- /dev/null
 +++ b/office.mjs
-@@ -0,0 +1,87 @@
+@@ -0,0 +1,122 @@
 +// Agents Office — builds globalThis.OFFICE before anything imports src/data.js (see src/office.js).
-+// Import this FIRST (serve.mjs, roster.mjs, check.mjs do).
++// Import this FIRST (serve.mjs and roster.mjs do).
 +//
-+// office.config.json / office.config.local.json keys:
-+//   pack         "agency" (AJ's six departments, the default) or the name of a file in packs/
-+//   departments  { "<slot>": { "on": false } } — take a department off the floor
-+//   wing         this office's name in the wing switcher, e.g. "R&D"
-+//   wings        [{ "name": "Main office", "url": "http://localhost:4520" }] — other offices to link to
-+// Environment: AO_PACK, AO_WING, AO_OFF (comma-separated slots) override the files.
++// Settings keys (office.config.json / office.config.local.json, or the file AO_CONFIG names):
++//   org          the name of a file in orgs/ — your departments, sub-teams and people. Without it
++//                the office is AJ's agency, unchanged.
++//   departments  { "<key>": { "on": false } } — take a department off the floor
++//   wing         this office's name in the wing switcher, e.g. "MAIN OFFICE"
++//   wings        [{ "name": "R&D", "url": "http://localhost:4521" }] — other offices on this machine
++// Environment: AO_ORG, AO_OFF (comma-separated keys), AO_WING override the files.
++//
++// orgs/<name>.json:
++//   { "title": "…",
++//     "departments": [
++//       { "key": "military", "name": "MILITARY", "about": "what work this department owns (the Boss reads it)",
++//         "boss": false, "chip": "#rrggbb", "prop": "rack",
++//         "lead":  { "id": "mil-lead", "name": "MILITARY LEAD", "role": "…", "does": "…", "tasks": […], "chips": […] },
++//         "teams": [ { "name": "SOFTWARE", "people": [ { "id": "…", "name": "…", "role": "…", "does": "…", "tasks": […] } ] } ],
++//         "worklines": […], "approvals": […], "kpis": [{ "label": "…", "val": 0 }] } ] }
++//   One department may be the boss ("boss": true): work given to it is passed to the department
++//   that owns it. Ids are optional (made from the name) but must be unique across the org.
 +import fs from 'node:fs';
 +import path from 'node:path';
 +import { ROOT, loadConfig } from './config.mjs';
 +
-+const SLOTS = ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery'];
-+const SEATS = { emails: 5, sales: 6, marketing: 7, ops: 6, fin: 4, delivery: 7 }; // the floor's fixed desks per slot
-+const HEX = /^#[0-9a-f]{6}$/i;
++const AJ = ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery'];
++const HEX = /^#[0-9a-f]{6}$/i, KEY = /^[a-z][a-z0-9-]{0,23}$/;
++const LIMITS = { departments: 12, perDept: 30, total: 150 };
++const slug = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 30);
++const str = (v, n) => String(v ?? '').trim().slice(0, n);
++const list = (v, n, m) => (Array.isArray(v) ? v : []).map(x => str(x, m)).filter(Boolean).slice(0, n);
 +
-+export function listPacks() {
-+  try { return fs.readdirSync(path.join(ROOT, 'packs')).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)); } catch { return []; }
++export function listOrgs() {
++  try { return fs.readdirSync(path.join(ROOT, 'orgs')).filter(f => f.endsWith('.json')).map(f => f.slice(0, -5)); } catch { return []; }
 +}
 +
-+/** read and check a pack; returns { pack, problems } — problems are sentences, never thrown */
-+export function readPack(name) {
++/** read and check an org file; returns { org, problems } — problems are sentences, never thrown */
++export function readOrg(name) {
 +  const problems = [];
-+  if (!name || name === 'agency') return { pack: null, problems };
-+  if (!/^[a-z0-9-]{1,40}$/.test(name)) return { pack: null, problems: [`pack "${name}": names are lower-case letters, digits and dashes — using agency`] };
-+  let doc; try { doc = JSON.parse(fs.readFileSync(path.join(ROOT, 'packs', name + '.json'), 'utf8')); }
-+  catch (e) { return { pack: null, problems: [`pack "${name}": ${e.code === 'ENOENT' ? 'no such file in packs/' : 'not valid JSON'} — using agency`] }; }
-+  const pack = { name, title: String(doc.title || name).slice(0, 60), about: String(doc.about || '').slice(0, 400), slots: {}, world: doc.world || {}, segments: Array.isArray(doc.segments) ? doc.segments.slice(0, 12) : [] };
-+  for (const k of SLOTS) {
-+    const s = doc.slots && doc.slots[k]; if (!s) continue;
-+    const seats = Array.isArray(s.seats) ? s.seats.filter(p => p && p.name) : [];
-+    if (seats.length > SEATS[k]) problems.push(`pack "${name}": ${k} has ${seats.length} seats, the floor has ${SEATS[k]} — the rest are left out`);
-+    const out = { name: String(s.name || k).toUpperCase().slice(0, 24), prop: s.prop, seats: seats.slice(0, SEATS[k]).map(p => ({
-+      name: String(p.name).toUpperCase().slice(0, 32), role: String(p.role || '').slice(0, 80), does: String(p.does || '').slice(0, 400),
-+      tasks: (p.tasks || []).map(String).slice(0, 6), chips: (p.chips || []).map(String).slice(0, 3), greeting: p.greeting ? String(p.greeting).slice(0, 300) : undefined })),
-+      worklines: (s.worklines || []).map(String).slice(0, 6), kpis: (s.kpis || []).slice(0, 3), approvals: (s.approvals || []).map(String).slice(0, 4), document: s.document || null };
-+    for (const c of ['chip', 'ink', 'floor']) if (s[c] !== undefined) { if (HEX.test(s[c])) out[c] = s[c]; else problems.push(`pack "${name}": ${k}.${c} must be a #rrggbb colour — ignored`); }
-+    if (!out.seats.length) problems.push(`pack "${name}": ${k} has no seats — the slot is left empty`);
-+    pack.slots[k] = out;
++  if (!name) return { org: null, problems };
++  if (!/^[a-z0-9-]{1,40}$/.test(name)) return { org: null, problems: [`org "${name}": names are lower-case letters, digits and dashes — using AJ's agency`] };
++  let doc; try { doc = JSON.parse(fs.readFileSync(path.join(ROOT, 'orgs', name + '.json'), 'utf8')); }
++  catch (e) { return { org: null, problems: [`org "${name}": ${e.code === 'ENOENT' ? 'no such file in orgs/' : 'not valid JSON (' + e.message.split('\n')[0] + ')'} — using AJ's agency`] }; }
++  const ids = new Set(), keys = new Set(); let total = 0, bosses = 0;
++  const person = (p, dk, where) => {
++    if (!p || !str(p.name, 32)) { problems.push(`${where}: a person has no name — left out`); return null; }
++    let id = slug(p.id || `${dk}-${p.name}`); if (!id) id = `${dk}-${ids.size}`;
++    if (ids.has(id)) { const id2 = `${id}-${ids.size}`; problems.push(`${where}: id "${id}" is used twice — the second is "${id2}"`); id = id2; }
++    ids.add(id);
++    return { id, name: str(p.name, 32).toUpperCase(), role: str(p.role, 80), does: str(p.does, 400), tasks: list(p.tasks, 6, 120), chips: list(p.chips, 3, 60), greeting: p.greeting ? str(p.greeting, 300) : undefined };
++  };
++  const departments = [];
++  for (const d of Array.isArray(doc.departments) ? doc.departments : []) {
++    if (departments.length >= LIMITS.departments) { problems.push(`more than ${LIMITS.departments} departments — the rest are left out`); break; }
++    const key = slug(d?.key || d?.name || '').replace(/^[^a-z]+/, '');
++    if (!key || !KEY.test(key) || key === 'brain' || keys.has(key)) { problems.push(`department "${d?.name || d?.key || '?'}": needs a unique key (letters, digits, dashes; not "brain") — left out`); continue; }
++    keys.add(key);
++    const out = { key, name: str(d.name || key, 24).toUpperCase(), about: str(d.about, 300), boss: d.boss === true && bosses++ === 0, prop: d.prop,
++      worklines: list(d.worklines, 6, 80), approvals: list(d.approvals, 4, 140), kpis: (Array.isArray(d.kpis) ? d.kpis : []).slice(0, 3).map(k => ({ label: str(k.label, 28).toUpperCase(), val: Number.isFinite(k.val) ? k.val : 0 })) };
++    if (d.boss === true && !out.boss) problems.push(`${out.name}: only one department can be the boss — this one isn't`);
++    for (const c of ['chip', 'ink', 'floor']) if (d[c] !== undefined) { if (HEX.test(d[c])) out[c] = d[c]; else problems.push(`${out.name}.${c} must be a #rrggbb colour — ignored`); }
++    out.lead = person(d.lead || { name: `${out.name} LEAD`, role: `Head of ${out.name.toLowerCase()}` }, key, out.name);
++    out.teams = []; let n = 1;
++    for (const t of Array.isArray(d.teams) ? d.teams : []) {
++      const people = [];
++      for (const p of Array.isArray(t?.people) ? t.people : []) {
++        if (n >= LIMITS.perDept || total >= LIMITS.total) { problems.push(`${out.name}: too many people (max ${LIMITS.perDept} a department, ${LIMITS.total} in all) — the rest are left out`); break; }
++        const q = person(p, key, out.name); if (q) { people.push(q); n++; }
++      }
++      if (people.length) out.teams.push({ name: str(t.name || 'TEAM', 24).toUpperCase(), people });
++    }
++    total += n; departments.push(out);
 +  }
-+  return { pack, problems };
++  if (!departments.length) return { org: null, problems: [...problems, `org "${name}": no departments — using AJ's agency`] };
++  return { org: { name, title: str(doc.title || name, 60), departments }, problems };
 +}
 +
 +/** the INDUSTRY PROFILE shape (src/profile.js) the dashboard's demo content already understands */
-+function toProfile(pack, office, company, seatIds) {
-+  const pods = {}, agents = {}, worklines = {}, kpis = {}, approvals = {}, documents = {};
-+  for (const k of SLOTS) {
-+    const s = pack.slots[k]; if (!s || office.off.includes(k)) continue;
-+    pods[k] = s.name;
-+    s.seats.forEach((p, i) => { const id = seatIds[k][i]; if (id) agents[id] = { name: p.name, role: p.role, does: p.does, tasks: p.tasks.length ? p.tasks : [p.does || 'Working through the queue'], chips: p.chips, greeting: p.greeting, tools: [] }; });
-+    if (s.worklines.length) worklines[k] = s.worklines;
-+    if (s.kpis.length) kpis[k] = s.kpis;
-+    if (s.approvals.length) approvals[k] = s.approvals;
-+    if (s.document) documents[k] = s.document;
++function toProfile(org, company) {
++  const pods = {}, agents = {}, worklines = {}, kpis = {}, approvals = {};
++  for (const d of org.departments) {
++    pods[d.key] = d.name;
++    const dn = d.name.toLowerCase();
++    const fallback = (p, team) => p === d.lead
++      ? (d.boss ? ['Routing the latest requests', 'Checking what each department delivered', 'Setting this week\'s priorities'] : [`Splitting the latest ${dn} job across the sub-teams`, `Reviewing what the sub-teams delivered`, `Planning the next ${dn} milestone`])
++      : [`Working on the latest ${team.toLowerCase()} job`, `Handing a finished piece back to the ${dn} lead`];
++    const add = (p, team) => { agents[p.id] = { name: p.name, role: p.role, does: p.does, tasks: p.tasks.length ? p.tasks : fallback(p, team), chips: p.chips, greeting: p.greeting, tools: [] }; };
++    add(d.lead, ''); for (const t of d.teams) for (const p of t.people) add(p, t.name);
++    worklines[d.key] = d.worklines; approvals[d.key] = d.approvals;
++    kpis[d.key] = d.kpis.length ? d.kpis : [{ label: 'SUB-TEAMS', val: d.teams.length }];
 +  }
-+  return { slug: pack.name, industry: pack.title, company, pods, agents, worklines, kpis, approvals, documents, segments: pack.segments, world: pack.world, strip: [], logos: {} };
++  return { slug: org.name, industry: org.title, company, pods, agents, worklines, kpis, approvals, documents: {}, segments: [], world: {}, strip: [], logos: {} };
 +}
 +
-+let FULL = null; // the whole pack (tasks, chips, documents) — only the server needs it, to write the page's profile
-+/** the page's window.PROFILE for this pack, with seat ids taken from the (already filtered) AGENTS */
-+export function pageProfile(office, AGENTS, company) {
-+  if (!FULL) return null;
-+  const seatIds = Object.fromEntries(SLOTS.map(k => [k, AGENTS.filter(a => a.dept === k).map(a => a.id)]));
-+  return toProfile(FULL, office, company, seatIds);
-+}
++let FULL = null; // the whole org (tasks, chips) — only the page profile needs it
++/** the page's window.PROFILE for this org */
++export function pageProfile(office, AGENTS, company) { return FULL ? toProfile(FULL, company) : null; }
++
++/** the org as the page and src/data.js need it: structure and names, no task pools */
++const slim = org => ({ name: org.name, title: org.title, departments: org.departments.map(d => ({
++  key: d.key, name: d.name, about: d.about, boss: d.boss, prop: d.prop, chip: d.chip, ink: d.ink, floor: d.floor, worklines: d.worklines, approvals: d.approvals,
++  lead: { id: d.lead.id, name: d.lead.name, role: d.lead.role, does: d.lead.does },
++  teams: d.teams.map(t => ({ name: t.name, people: t.people.map(({ id, name, role, does }) => ({ id, name, role, does })) })) })) });
 +
 +export function buildOffice(cfg = loadConfig()) {
 +  const problems = [];
-+  const name = process.env.AO_PACK || cfg.pack || 'agency';
-+  const { pack, problems: pp } = readPack(name); problems.push(...pp);
++  const name = process.env.AO_ORG !== undefined ? process.env.AO_ORG : (cfg.org || '');
++  const { org, problems: op } = readOrg(name); problems.push(...op);
++  const keys = org ? org.departments.map(d => d.key) : AJ;
 +  const deps = cfg.departments || {};
-+  let off = SLOTS.filter(k => deps[k] && deps[k].on === false);
-+  if (process.env.AO_OFF !== undefined) off = String(process.env.AO_OFF).split(',').map(s => s.trim()).filter(k => SLOTS.includes(k));
-+  if (pack) for (const k of SLOTS) if (!pack.slots[k] || !pack.slots[k].seats.length) if (!off.includes(k)) off.push(k);
-+  if (off.length === SLOTS.length) { problems.push('every department is off — turning the first one back on'); off = off.slice(1); }
++  let off = keys.filter(k => deps[k] && deps[k].on === false);
++  if (process.env.AO_OFF !== undefined) off = String(process.env.AO_OFF).split(',').map(s => s.trim()).filter(k => keys.includes(k));
++  if (off.length >= keys.length) { problems.push('every department is off — turning the first one back on'); off = off.filter(k => k !== keys[0]); }
 +  const wings = (Array.isArray(cfg.wings) ? cfg.wings : []).filter(w => w && w.name && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/.test(String(w.url || '')))
 +    .map(w => ({ name: String(w.name).slice(0, 24), url: String(w.url) }));
 +  if ((cfg.wings || []).length !== wings.length) problems.push('wings: only links to http://localhost:<port> or 127.0.0.1 are kept — a wing is another office on this machine');
-+  const office = { pack: pack ? { name: pack.name, title: pack.title, slots: Object.fromEntries(Object.entries(pack.slots).map(([k, s]) => [k, { name: s.name, chip: s.chip, ink: s.ink, floor: s.floor, prop: s.prop, seats: s.seats.map(({ name, role, does }) => ({ name, role, does })) }])) } : null,
-+    off, wing: String(process.env.AO_WING || cfg.wing || '').slice(0, 24), wings, problems };
-+  FULL = pack;
-+  return office;
++  FULL = org;
++  return { org: org ? slim(org) : null, off, wing: String(process.env.AO_WING || cfg.wing || '').slice(0, 24), wings, problems };
 +}
 +
 +// set it now, before src/data.js is evaluated by whoever imported us
 +globalThis.OFFICE = buildOffice();
-diff --git a/packs/rnd-lab.json b/packs/rnd-lab.json
+diff --git a/orgs/elenta.json b/orgs/elenta.json
 new file mode 100644
-index 0000000..bff808a
+index 0000000..6dcc6fd
 --- /dev/null
-+++ b/packs/rnd-lab.json
-@@ -0,0 +1,101 @@
++++ b/orgs/elenta.json
+@@ -0,0 +1,64 @@
 +{
-+  "title": "R&D lab",
-+  "about": "A research and development programme office: research, programmes, engineering, security and compliance, cost and funding, test and evaluation. For unrestricted work only: nothing export-controlled, classified or CUI goes into an office that runs on Claude's public API.",
-+  "segments": ["programme sponsors", "partner labs", "test ranges", "suppliers"],
-+  "world": {
-+    "customers": ["Programme Alpha", "Programme Kestrel", "the partner lab", "the sponsor", "the trials team"],
-+    "competitors": ["the incumbent supplier", "the university consortium", "the overseas prime"],
-+    "cities": ["the lab", "the test range", "the integration facility"]
-+  },
-+  "slots": {
-+    "emails": {
-+      "name": "RESEARCH", "chip": "#5ADEB7", "ink": "#1E9070", "floor": "#E9F6EF", "prop": "shelf",
-+      "seats": [
-+        { "name": "RESEARCH LEAD", "role": "Head of Research", "does": "Sets the research questions, splits them across the desks and signs off every literature summary before it reaches a programme.", "tasks": ["Scoping the research questions for {co}", "Reviewing the weekly literature digest", "Ranking open questions by programme impact"], "chips": ["What are we researching this week?", "Which questions are blocked?", "Show me the open questions"] },
-+        { "name": "LITERATURE REVIEW", "role": "Literature Review Agent", "does": "Searches published papers and open reports, summarises them with full citations, and flags where sources disagree.", "tasks": ["Summarising {n} open papers on composite fatigue", "Building the citation table for {co}", "Flagging two papers with conflicting results"], "chips": ["What did you read today?", "Which sources disagree?", "Show me the citation table"] },
-+        { "name": "PRIOR ART", "role": "Patent and Prior-Art Agent", "does": "Checks public patents and prior art before the team commits to a design direction, and says how close each one is.", "tasks": ["Prior-art search for the sensor housing concept", "Comparing {count} patents against the design brief", "Writing the freedom-to-operate notes"], "chips": ["Any patents in the way?", "How close is the nearest one?", "What did you search?"] },
-+        { "name": "STANDARDS WATCH", "role": "Standards Agent", "does": "Tracks the public standards the programme must meet and reports every revision that changes a requirement.", "tasks": ["Checking the new revision of the environmental test standard", "Mapping {count} standard clauses to requirements", "Noting a changed vibration limit"], "chips": ["Which standards changed?", "What do they affect?", "Show me the clause map"] },
-+        { "name": "TECH SCOUT", "role": "Technology Scout", "does": "Watches open sources for emerging technology, suppliers and partner labs, and writes one short brief per find.", "tasks": ["Brief: a new open battery-chemistry result", "Shortlisting {count} partner labs for the materials work", "Weekly technology watch summary"], "chips": ["What's new this week?", "Any partner labs worth a call?", "Show me the watch list"] }
++  "title": "Elenta",
++  "departments": [
++    {
++      "key": "boss", "name": "BOSS", "boss": true, "chip": "#151414", "ink": "#151414", "floor": "#ECEBE6", "prop": "whiteboard",
++      "about": "Takes any request, decides which department owns that kind of work, and hands it over. Does work itself only when no department owns it.",
++      "lead": { "id": "boss", "name": "BOSS", "role": "Head of the office", "does": "Reads every request, picks the department that owns that domain, and holds them to the result.",
++        "tasks": ["Routing this morning's requests", "Reviewing what each department delivered", "Setting this week's priorities"], "chips": ["Who is working on what?", "What's late?", "What needs my decision?"] },
++      "teams": [
++        { "name": "OFFICE OF THE BOSS", "people": [
++          { "id": "chief-of-staff", "name": "CHIEF OF STAFF", "role": "Chief of Staff", "does": "Tracks every handed-out job, chases what's late and writes the daily brief.",
++            "tasks": ["Writing the daily brief", "Chasing two late deliverables", "Updating the priorities list"], "chips": ["What's in today's brief?", "What's late?", "Show me the priorities"] }
++        ] }
 +      ],
-+      "worklines": ["literature digest: 14 papers · 3 flagged", "prior-art search: sensor housing", "standards revision mapped to 6 requirements", "tech watch: 2 new briefs"],
-+      "kpis": [{ "label": "PAPERS SUMMARISED", "val": 86 }],
-+      "approvals": ["Add the composite-fatigue summary to the programme record", "Send the partner-lab shortlist to the programme lead"],
-+      "document": { "title": "Literature summary — composite fatigue", "lines": ["Sources: 14 open papers, all cited", "Agreement: 11 of 14 on the main result", "Conflict: 3 papers, flagged for the lead", "Status: draft, nothing sent"] }
++      "worklines": ["routed 4 requests · 3 to MILITARY", "daily brief drafted", "2 deliverables chased"],
++      "kpis": [{ "label": "REQUESTS ROUTED", "val": 0 }]
 +    },
-+    "sales": {
-+      "name": "PROGRAMMES", "chip": "#EADC8F", "ink": "#A08A1E", "floor": "#F6F1DA", "prop": "whiteboard",
-+      "seats": [
-+        { "name": "PROGRAMME LEAD", "role": "Programme Manager", "does": "Owns scope, schedule and risk for each programme, and decides what goes to the sponsor.", "tasks": ["Updating the risk register for {co}", "Preparing the monthly sponsor review", "Re-baselining two milestones"], "chips": ["Where are the programmes?", "What are the top risks?", "What needs my decision?"] },
-+        { "name": "REQUIREMENTS", "role": "Requirements Analyst", "does": "Turns the sponsor's statement of need into numbered, testable requirements and keeps them traced to tests.", "tasks": ["Decomposing {n} sponsor needs into requirements", "Tracing requirements to the test plan", "Flagging three untestable requirements"], "chips": ["Which requirements are untestable?", "Show me the trace", "What changed this week?"] },
-+        { "name": "BID WRITER", "role": "Bid and Tender Writer", "does": "Writes bid and grant responses from the programme record, answering every question in the order asked.", "tasks": ["Drafting the technical volume for {co}", "Answering {count} compliance questions", "Building the bid compliance matrix"], "chips": ["What bids are open?", "What's missing?", "Show me the compliance matrix"] },
-+        { "name": "STAKEHOLDERS", "role": "Stakeholder Liaison", "does": "Keeps the sponsor, partner labs and suppliers informed, and drafts every update for the programme lead to send.", "tasks": ["Drafting the sponsor update", "Preparing the partner-lab meeting pack", "Logging actions from the design review"], "chips": ["Who needs an update?", "What did we promise?", "Show me the actions"] },
-+        { "name": "MILESTONES", "role": "Contracts and Milestones Agent", "does": "Tracks contract milestones and deliverables, and warns two weeks before anything is due.", "tasks": ["Checking deliverables due this month", "Matching milestone evidence to the contract", "Warning: design review evidence due in 12 days"], "chips": ["What's due?", "What's at risk?", "Show me the milestones"] },
-+        { "name": "PROGRAMME REPORTS", "role": "Reporting Agent", "does": "Writes the monthly programme report from the record: progress, spend, risks and decisions.", "tasks": ["Monthly report for {co}", "Charting earned value", "Summarising decisions taken"], "chips": ["Is the report ready?", "What's in it?", "Show me the charts"] }
++    {
++      "key": "military", "name": "MILITARY", "prop": "rack",
++      "about": "Owns all military-domain work end to end: software and code, technical documents, analysis, and the compliance checks on everything that leaves the department.",
++      "lead": { "id": "mil-lead", "name": "MILITARY LEAD", "role": "Head of the military department", "does": "Takes every military job, splits it across the sub-teams, and signs off the combined result.",
++        "tasks": ["Splitting the new request across the sub-teams", "Reviewing the combined deliverable", "Planning the next milestone"], "chips": ["What are the sub-teams on?", "What's ready for sign-off?", "What's blocked?"] },
++      "teams": [
++        { "name": "SOFTWARE", "people": [
++          { "id": "mil-sw-lead", "name": "SOFTWARE LEAD", "role": "Software lead", "does": "Owns the code: designs, reviews and merges, and keeps the software baseline documented.", "tasks": ["Reviewing the data-logging module", "Planning the next release", "Triaging {count} open issues"] },
++          { "id": "mil-sw-dev", "name": "SOFTWARE ENGINEER", "role": "Software engineer", "does": "Writes and tests code to the agreed requirements.", "tasks": ["Writing the parser for the test data", "Fixing {count} failing unit tests", "Refactoring the config loader"] },
++          { "id": "mil-sw-test", "name": "TEST AUTOMATION", "role": "Test automation engineer", "does": "Builds the automated tests that prove each requirement.", "tasks": ["Adding tests for {n} requirements", "Speeding up the test suite", "Writing the regression report"] }
++        ] },
++        { "name": "DOCUMENTATION", "people": [
++          { "id": "mil-doc-writer", "name": "TECHNICAL WRITER", "role": "Technical writer", "does": "Writes manuals, reports and procedures from the engineering notes.", "tasks": ["Drafting the user manual", "Writing the test report", "Updating the procedure"] },
++          { "id": "mil-doc-editor", "name": "DOCUMENT CONTROL", "role": "Document controller", "does": "Versions, reviews and marks every document before it leaves the department.", "tasks": ["Versioning {count} documents", "Checking markings", "Building the document index"] }
++        ] },
++        { "name": "ANALYSIS", "people": [
++          { "id": "mil-an-1", "name": "ANALYST", "role": "Analyst", "does": "Researches open sources and writes analysis with every source cited.", "tasks": ["Summarising {n} open sources", "Writing the options analysis", "Building the comparison table"] },
++          { "id": "mil-an-data", "name": "DATA ANALYST", "role": "Data analyst", "does": "Analyses test and trial data and states the uncertainty.", "tasks": ["Analysing the trial data", "Charting the results", "Writing the analysis note"] }
++        ] },
++        { "name": "COMPLIANCE", "people": [
++          { "id": "mil-export", "name": "EXPORT CHECK", "role": "Export control checker", "does": "Screens everything leaving the department against the export-control checklist and holds anything that needs a licence decision.", "tasks": ["Screening {count} outgoing documents", "Holding one for a licence decision", "Updating the checklist"] },
++          { "id": "mil-security", "name": "SECURITY OFFICER", "role": "Information security officer", "does": "Checks handling rules, the sandbox policy log and who approved what.", "tasks": ["Reviewing the sandbox policy log", "Checking handling rules", "Writing the weekly security note"] }
++        ] }
 +      ],
-+      "worklines": ["risk register: 2 risks raised", "requirements traced 48/52", "bid technical volume 3/7 sections", "sponsor update drafted"],
-+      "kpis": [{ "label": "REQUIREMENTS TRACED", "val": 48 }],
-+      "approvals": ["Send the monthly sponsor update — draft attached", "Submit the bid compliance matrix — 2 answers marked (assumed)"],
-+      "document": { "title": "Programme status — monthly", "lines": ["Schedule: 2 milestones re-baselined", "Risks: 2 new, 1 closed", "Requirements: 48 of 52 traced to tests", "Status: draft, waiting for your OK"] }
++      "worklines": ["software: data-logging module in review", "documentation: test report 4/7 sections", "analysis: options paper drafted", "compliance: 1 document held for a licence decision"],
++      "approvals": ["Release the test report — export screening passed", "Merge the data-logging module — all tests pass"],
++      "kpis": [{ "label": "DELIVERABLES THIS WEEK", "val": 0 }]
 +    },
-+    "marketing": {
-+      "name": "ENGINEERING", "chip": "#E69393", "ink": "#C46060", "floor": "#FAE9E7", "prop": "moodboard",
-+      "seats": [
-+        { "name": "ENGINEERING LEAD", "role": "Chief Engineer", "does": "Owns the technical baseline, runs design reviews, and decides which trade-offs go to the programme lead.", "tasks": ["Preparing the preliminary design review", "Reviewing {count} change requests", "Setting the technical baseline"], "chips": ["What's in the baseline?", "Which changes are open?", "When is the next review?"] },
-+        { "name": "SYSTEMS ENGINEER", "role": "Systems Engineer", "does": "Keeps the architecture, interfaces and budgets (mass, power, data) consistent across the design.", "tasks": ["Updating the interface control document", "Re-running the power budget", "Checking mass margins after the change"], "chips": ["Are the budgets OK?", "Which interfaces changed?", "Show me the margins"] },
-+        { "name": "DESIGN REVIEW", "role": "Design Review Agent", "does": "Checks each design package against requirements and the review checklist before people see it.", "tasks": ["Pre-review of the enclosure package", "Checking {count} drawings against requirements", "Writing review findings"], "chips": ["What did the review find?", "Which findings are open?", "Show me the checklist"] },
-+        { "name": "MODELLING", "role": "Simulation and Modelling Agent", "does": "Sets up and documents analysis runs, compares results with test data, and states every assumption.", "tasks": ["Documenting the thermal model assumptions", "Comparing simulation with bench data", "Writing the model validation note"], "chips": ["How good is the model?", "What are the assumptions?", "Show me the comparison"] },
-+        { "name": "SOFTWARE", "role": "Software Engineer", "does": "Writes and reviews test and analysis tooling, and keeps the software baseline documented.", "tasks": ["Reviewing the data-logging tool", "Writing the test harness for the bench", "Updating the software version record"], "chips": ["What's in the software baseline?", "Any open bugs?", "Show me the version record"] },
-+        { "name": "INTEGRATION", "role": "Hardware Integration Agent", "does": "Plans integration steps and checklists so parts come together in a known, recorded order.", "tasks": ["Writing the integration procedure", "Checking parts availability for the build", "Logging integration issues"], "chips": ["What's the build order?", "What's missing?", "Show me the procedure"] },
-+        { "name": "TECHNICAL WRITER", "role": "Technical Writer", "does": "Turns engineering notes into clean reports, procedures and manuals in house style.", "tasks": ["Writing the design report", "Editing the integration procedure", "Building the document index"], "chips": ["What are you writing?", "What's waiting for review?", "Show me the index"] }
++    {
++      "key": "business", "name": "BUSINESS", "prop": "cabinets",
++      "about": "Owns the running of the company: finance, contracts and admin. Not military-domain work.",
++      "lead": { "id": "biz-lead", "name": "BUSINESS LEAD", "role": "Head of business", "does": "Runs finance, contracts and admin, and splits each job across the sub-teams." },
++      "teams": [
++        { "name": "FINANCE", "people": [
++          { "id": "biz-fin", "name": "ACCOUNTANT", "role": "Accountant", "does": "Tracks spend against budget and explains variances.", "tasks": ["Monthly spend report", "Explaining a 7% variance", "Closing the month"] }
++        ] },
++        { "name": "CONTRACTS", "people": [
++          { "id": "biz-contracts", "name": "CONTRACTS", "role": "Contracts manager", "does": "Tracks contract milestones and drafts contract letters for approval.", "tasks": ["Checking milestones due this month", "Drafting a variation letter", "Updating the contracts register"] }
++        ] },
++        { "name": "ADMIN", "people": [
++          { "id": "biz-admin", "name": "OFFICE ADMIN", "role": "Office administrator", "does": "Keeps the calendar, suppliers and office running.", "tasks": ["Booking the review meeting", "Chasing a supplier quote", "Updating the supplier list"] }
++        ] }
 +      ],
-+      "worklines": ["design review pack: 5/8 sections", "interface control doc updated", "thermal model vs bench: within 4%", "integration procedure drafted"],
-+      "kpis": [{ "label": "CHANGE REQUESTS OPEN", "val": 7 }],
-+      "approvals": ["Freeze the technical baseline for the design review", "Release the design report v1 to the programme record"],
-+      "document": { "title": "Design review findings", "lines": ["Package: enclosure, rev B", "Findings: 6 (2 major, 4 minor)", "Requirements checked: 31", "Status: draft, nothing released"] }
-+    },
-+    "ops": {
-+      "name": "SECURITY & COMPLIANCE", "chip": "#BFA2E3", "ink": "#7449A9", "floor": "#F2ECFA", "prop": "rack",
-+      "seats": [
-+        { "name": "SECURITY LEAD", "role": "Programme Security Lead", "does": "Owns information handling for the wing: what may come in, what may go out, and who approves it.", "tasks": ["Reviewing this week's outbound requests", "Updating the handling rules", "Checking the audit log for refusals"], "chips": ["What was refused this week?", "What's waiting for approval?", "Show me the handling rules"] },
-+        { "name": "EXPORT CHECK", "role": "Export Control Checker", "does": "Screens every outgoing document against the export-control checklist and stops anything that needs a licence decision.", "tasks": ["Screening the partner-lab pack", "Checking {count} documents against the checklist", "Holding one document for a licence decision"], "chips": ["What did you hold back?", "Why?", "Show me the checklist"] },
-+        { "name": "MARKINGS", "role": "Document Markings Agent", "does": "Checks every document carries the right handling marking and stops anything unmarked from leaving.", "tasks": ["Checking markings on {n} documents", "Flagging two unmarked drafts", "Updating the markings guide"], "chips": ["Anything unmarked?", "Which marking applies?", "Show me the guide"] },
-+        { "name": "SAFETY CASE", "role": "Safety Case Agent", "does": "Keeps the hazard log and safety case current, and links every hazard to its mitigation and evidence.", "tasks": ["Updating the hazard log", "Linking evidence to {count} mitigations", "Drafting the safety case section"], "chips": ["What hazards are open?", "Which lack evidence?", "Show me the hazard log"] },
-+        { "name": "INFO ASSURANCE", "role": "Information Assurance Agent", "does": "Checks the office's own controls: sandbox policy, network allowlist, who approved what, and that nothing ran outside them.", "tasks": ["Reviewing the sandbox policy log", "Checking the allowlist matches the policy", "Writing the weekly assurance note"], "chips": ["Is the sandbox locked down?", "Anything blocked this week?", "Show me the policy log"] },
-+        { "name": "AUDIT TRAIL", "role": "Audit Agent", "does": "Keeps the record of every decision, approval and release so an auditor can follow it end to end.", "tasks": ["Compiling the monthly audit pack", "Linking approvals to releases", "Checking for gaps in the record"], "chips": ["Any gaps in the record?", "Who approved this?", "Show me the audit pack"] }
-+      ],
-+      "worklines": ["export screening: 1 held for a licence decision", "markings: 2 drafts flagged", "hazard log: 3 mitigations linked", "sandbox policy log: 4 refusals, all expected"],
-+      "kpis": [{ "label": "DOCUMENTS SCREENED", "val": 132 }],
-+      "approvals": ["Release the partner-lab pack — export screening passed", "Accept the updated handling rules"],
-+      "document": { "title": "Outbound screening", "lines": ["Documents: 9", "Passed: 8", "Held: 1, for a licence decision", "Status: nothing sent without your OK"] }
-+    },
-+    "fin": {
-+      "name": "COST & FUNDING", "chip": "#98A5EF", "ink": "#5B66CE", "floor": "#EAEDFA", "prop": "cabinets",
-+      "seats": [
-+        { "name": "PROGRAMME ACCOUNTANT", "role": "Programme Accountant", "does": "Tracks spend against budget per work package and explains every variance over five per cent.", "tasks": ["Monthly spend vs budget for {co}", "Explaining a 7% variance on test hardware", "Closing the month"], "chips": ["Are we on budget?", "Which variances matter?", "Show me spend by work package"] },
-+        { "name": "COST ESTIMATOR", "role": "Cost Estimator", "does": "Builds bottom-up estimates for bids and changes, with every rate and assumption shown.", "tasks": ["Estimating the change request for the enclosure", "Building the bid cost model", "Checking rates against last year's actuals"], "chips": ["What does the change cost?", "What are the assumptions?", "Show me the model"] },
-+        { "name": "GRANTS", "role": "Grants and Funding Agent", "does": "Finds open public funding calls that fit the research, and tracks the deadlines and conditions.", "tasks": ["Checking {count} open funding calls", "Summarising the conditions of one call", "Tracking two deadlines"], "chips": ["Any calls that fit?", "What's due soon?", "Show me the conditions"] },
-+        { "name": "PROCUREMENT", "role": "Procurement Agent", "does": "Prepares purchase requests and supplier comparisons; nothing is ordered without approval.", "tasks": ["Comparing three suppliers for the test rig", "Preparing a purchase request", "Chasing a late delivery"], "chips": ["What's on order?", "What's late?", "Show me the comparison"] }
-+      ],
-+      "worklines": ["spend vs budget: 2 variances explained", "change request estimate: 3 options", "funding calls: 2 match", "supplier comparison: test rig"],
-+      "kpis": [{ "label": "WORK PACKAGES ON BUDGET", "val": 11 }],
-+      "approvals": ["Raise the purchase request for the test rig — 3 quotes attached", "Accept the change-request estimate — option B"],
-+      "document": { "title": "Change request estimate", "lines": ["Options: 3", "Recommended: B", "Assumptions: all shown, 2 marked (assumed)", "Status: draft, waiting for your OK"] }
-+    },
-+    "delivery": {
-+      "name": "TEST & EVALUATION", "chip": "#8FD3F4", "ink": "#2E86AB", "floor": "#E6F4FB", "prop": "shelf",
-+      "seats": [
-+        { "name": "T&E LEAD", "role": "Test and Evaluation Lead", "does": "Owns the test strategy, decides what must be proven and how, and signs off every test report.", "tasks": ["Reviewing the test strategy", "Signing off the bench test report", "Planning the next trial window"], "chips": ["What's been proven?", "What's next to test?", "What's waiting for sign-off?"] },
-+        { "name": "TEST PLANNER", "role": "Test Planner", "does": "Writes test plans and procedures with pass criteria taken straight from the requirements.", "tasks": ["Writing the vibration test procedure", "Setting pass criteria for {count} requirements", "Updating the test schedule"], "chips": ["What's planned?", "What are the pass criteria?", "Show me the schedule"] },
-+        { "name": "DATA ANALYST", "role": "Test Data Analyst", "does": "Cleans and analyses test data, compares it with predictions, and states the uncertainty.", "tasks": ["Analysing the bench run data", "Comparing results with the thermal model", "Writing the analysis note"], "chips": ["What did the data show?", "How certain is it?", "Show me the charts"] },
-+        { "name": "TRIALS", "role": "Trials Co-ordinator", "does": "Books trial windows, facilities and people, and keeps the trial checklist.", "tasks": ["Booking the test range window", "Preparing the trial checklist", "Confirming people and equipment"], "chips": ["When is the next trial?", "What's booked?", "Show me the checklist"] },
-+        { "name": "VERIFICATION", "role": "Verification Matrix Agent", "does": "Keeps the verification matrix: every requirement, how it is verified, and the evidence.", "tasks": ["Updating the verification matrix", "Linking {count} results as evidence", "Flagging requirements with no method"], "chips": ["What's verified?", "What's missing evidence?", "Show me the matrix"] },
-+        { "name": "QA CHECKER", "role": "Quality Assurance Checker", "does": "Checks reports, numbers and references before anything is signed off.", "tasks": ["QA of the bench test report", "Checking {n} numbers against raw data", "Logging QA findings"], "chips": ["What did QA find?", "Is it ready?", "Show me the findings"] },
-+        { "name": "LESSONS", "role": "Lessons Learned Agent", "does": "Captures what each test and trial taught the team, and writes it back into the brain.", "tasks": ["Writing lessons from the bench run", "Updating the lessons index", "Turning two lessons into checklist items"], "chips": ["What did we learn?", "What changed because of it?", "Show me the lessons"] }
-+      ],
-+      "worklines": ["verification matrix: 48/52 with a method", "bench run analysed: within limits", "trial window booked", "lessons: 2 new checklist items"],
-+      "kpis": [{ "label": "REQUIREMENTS VERIFIED", "val": 29 }],
-+      "approvals": ["Sign off the bench test report — QA passed", "Book the test range window — 3 days"],
-+      "document": { "title": "Bench test report", "lines": ["Tests run: 12", "Passed: 11", "Failed: 1, retest planned", "Status: QA passed, waiting for sign-off"] }
++      "kpis": [{ "label": "INVOICES CHECKED", "val": 0 }]
 +    }
-+  }
++  ]
 +}
 diff --git a/roster.mjs b/roster.mjs
-index 5bd9cbc..f88ab5d 100644
+index 5bd9cbc..bfd13d5 100644
 --- a/roster.mjs
 +++ b/roster.mjs
 @@ -8,6 +8,7 @@
  import fs from 'node:fs';
  import path from 'node:path';
  import { ROOT, loadConfig } from './config.mjs';
-+import './office.mjs'; // before src/data.js: the pack and the departments that are off
++import './office.mjs'; // before src/data.js: your org and the departments that are off
  import { AGENTS, DEPTS } from './src/data.js';
  import { V1 } from './src/v1data.js';
  
@@ -291,21 +317,30 @@ index 5bd9cbc..f88ab5d 100644
  
  export function defaults() {
 -  return AGENTS.map(a => { const p = V1.find(x => x.id === a.id) || {}; return { id: a.id, department: a.dept, lead: !!a.lead, name: a.name, role: p.role || '', does: p.tagline || '', tools: [], brief: '', model: '', effort: '' }; });
-+  return AGENTS.map(a => { const p = V1.find(x => x.id === a.id) || {}; return { id: a.id, department: a.dept, lead: !!a.lead, name: a.name, role: (globalThis.OFFICE?.pack ? a.role : p.role) || '', does: (globalThis.OFFICE?.pack ? a.does : p.tagline) || '', tools: [], brief: '', model: '', effort: '' }; });
++  return AGENTS.map(a => { const p = V1.find(x => x.id === a.id) || {}; return { id: a.id, department: a.dept, lead: !!a.lead, team: a.team || '', name: a.name, role: (globalThis.OFFICE?.org ? a.role : p.role) || '', does: (globalThis.OFFICE?.org ? a.does : p.tagline) || '', tools: [], brief: '', model: '', effort: '' }; });
  }
  // returns { agents, problems } — problems are human sentences, never thrown
  export function validate(doc, base = defaults()) {
+@@ -32,7 +33,7 @@ export function validate(doc, base = defaults()) {
+   for (const e of list) {
+     if (!e || typeof e !== 'object' || !e.id) { problems.push('an entry has no "id" — skipped'); continue; }
+     const a = out.find(x => x.id === e.id);
+-    if (!a) { problems.push(`"${e.id}" is not one of the 35 seats — skipped (new agents are not supported; rename a seat instead)`); continue; }
++    if (!a) { problems.push(`"${e.id}" is not a seat in this office — skipped (add people in the org file, or rename a seat)`); continue; }
+     if (seen.has(e.id)) problems.push(`"${e.id}" appears twice — the later entry wins`);
+     seen.add(e.id);
+     if (e.department !== undefined && e.department !== a.department) problems.push(`"${e.id}": department cannot change (${a.department} → ${e.department}) — ignored`);
 @@ -61,7 +62,7 @@ export function validate(doc, base = defaults()) {
  function read(p) { if (!fs.existsSync(p)) return null; try { return JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { return { __error: e.message }; } }
  export function loadRoster(brainPath = loadConfig().brainPath) {
    let agents = defaults(); const problems = [];
 -  const sources = [FILE, brainFile(brainPath), LOCAL];
-+  const sources = globalThis.OFFICE?.pack ? [brainFile(brainPath)] : [FILE, brainFile(brainPath), LOCAL]; // office.agents*.json describe the agency's seats; a pack brings its own, and edits go in that office's brain
++  const sources = globalThis.OFFICE?.org ? [brainFile(brainPath)] : [FILE, brainFile(brainPath), LOCAL]; // office.agents*.json describe AJ's seats; an org brings its own, and edits go in that office's brain
    const label = p => p === FILE || p === LOCAL ? path.basename(p) : 'brain/Agents Office/agents.json';
    for (const p of sources) {
      const doc = read(p); if (!doc) continue;
 diff --git a/serve.mjs b/serve.mjs
-index d1829d9..849fe8d 100644
+index d1829d9..aac4855 100644
 --- a/serve.mjs
 +++ b/serve.mjs
 @@ -39,9 +39,10 @@ import fs from 'node:fs';
@@ -314,7 +349,7 @@ index d1829d9..849fe8d 100644
  import { spawn } from 'node:child_process';
 -import { loadConfig, ROOT } from './config.mjs';
 +import { loadConfig, ROOT, LOCAL_CONFIG } from './config.mjs';
-+import { pageProfile, buildOffice, readPack, listPacks } from './office.mjs'; // first: sets globalThis.OFFICE before src/data.js is read
++import { pageProfile, buildOffice, readOrg, listOrgs } from './office.mjs'; // first: sets globalThis.OFFICE before src/data.js is read
  import { layoutGraph, readVault, readOfficeNotes } from './graph-build.mjs';
 -import { DEPTS, DEPT_KEYS } from './src/data.js';
 +import { DEPTS, DEPT_KEYS, AGENTS as AGENTS_FLOOR } from './src/data.js';
@@ -330,18 +365,54 @@ index d1829d9..849fe8d 100644
  const FILE = path.join(DATA, 'tasks.json');
  const BRAIN = cfg.brainPath;
  const NOTES_DIR = path.join(BRAIN, 'Agents Office');
-@@ -468,17 +469,47 @@ function refuse(req) {
+@@ -66,6 +67,7 @@ const RUN_TIMEOUT = Math.max(60, +cfg.timeout || 300) * 1000; // agents with too
+ { const e = normEffort(cfg.effort); if (cfg.effort && !e) console.warn(`config: effort must be low, medium, high, xhigh or max (got "${cfg.effort}") — using the model's own`); cfg.effort = e || ''; } // V3.6.1: the office's effort, empty = the model's own
+ mcp.configure(cfg);
+ const TEAMS = teams.settings(cfg); // V3.2 (16 Sep): { enabled, max }
++if (globalThis.OFFICE.org && !(cfg.teams && cfg.teams.max > 4)) TEAMS.max = 6; // YOUR DEPARTMENTS: a whole department, one desk per sub-team or so
+ const roster = loadRoster(BRAIN);
+ const AGENTS = roster.agents; // id · department · lead · name · role · does · tools · brief
+ for (const w of roster.problems) console.warn('agents:', w);
+@@ -210,6 +212,18 @@ function agentBrief(a) {
+   return (a.brief ? `\nSTANDING INSTRUCTIONS FROM THE OWNER\n${a.brief}\n` : '') + (skills.promptText(a) ? `\n${skills.promptText(a)}\n` : '') + (lessons ? `\n${lessons}\n` : '');
+ }
+ const toolKeys = names => [...new Set(names.map(n => /^mcp__/.test(n) ? mcp.keyOf(n) : n === 'WebSearch' || n === 'WebFetch' ? 'web' : null).filter(Boolean))];
++// YOUR DEPARTMENTS: the Boss reads a request and names the department that owns that domain of work
++async function bossRoute(text) {
++  const boss = Object.keys(DEPTS).find(k => DEPTS[k].boss && !DEPTS[k].off);
++  const opts = DEPT_KEYS.filter(k => !DEPTS[k].boss && !DEPTS[k].off);
++  if (!opts.length) return { dept: boss, why: '' };
++  const system = `You are ${leadOf(boss).name}, the head of ${cfg.name}. You never do the work yourself: you decide which department owns this kind of work and hand it over. Return ONLY a JSON object — no prose, no code fences.`;
++  const user = 'Departments (key · name · what work it owns · sub-teams):\n' + opts.map(k => `- ${k} · ${DEPTS[k].name} · ${DEPTS[k].about || '(no description)'} · ${(DEPTS[k].teams || []).join(', ')}`).join('\n') +
++    `\n\nThe request: "${text}"\n\nPick the ONE department whose domain this is. If none fits, use "${boss}".\nReturn: {"dept":"<key from the list>","why":"<one short sentence>"}`;
++  let j = {}; try { j = parseJSON(await ask(system, user, { maxTokens: 300, timeout: 120000, model: 'sonnet' })); } catch {}
++  const dept = [...opts, boss].includes(j.dept) ? j.dept : boss;
++  return { dept, why: String(j.why || '').slice(0, 160) };
++}
+ async function route(dept, text) {
+   const d = DEPTS[dept]; refreshSkills();
+   const system = `You are the router for ${cfg.name}, a business whose departments are run by AI agents. ` +
+@@ -270,7 +284,7 @@ async function runTeam(task, mode) {
+   const lead = AGENTS.find(x => x.id === task.agent), dept = lead.department;
+   refreshSkills();
+   const index = vaultIndex();
+-  const seats = AGENTS.filter(a => a.department === dept).map(a => ({ id: a.id, lead: a.lead, name: a.name, role: a.role, does: a.does, skills: skills.names(a) }));
++  const seats = AGENTS.filter(a => a.department === dept).map(a => ({ id: a.id, lead: a.lead, name: a.name, role: a.role, does: a.does, team: a.team || '', skills: skills.names(a) }));
+   const max = Math.min(TEAMS.max, teams.askedSize(task.text) || TEAMS.max);
+   // 1. the plan — the lead splits the request across the desks (Sonnet, no tools: a JSON job)
+   const pp = teams.planPrompt({ business: cfg.name, deptName: DEPTS[dept].name, lead, seats, text: task.text, title: task.title, max, notes: contextText(index, relevantNotes(index, dept, task.title + ' ' + task.text, 3)).slice(0, 4000) });
+@@ -468,17 +482,50 @@ function refuse(req) {
    if (req.method === 'POST' && +(req.headers['content-length'] || 0) > 0 && !/^application\/json\b/i.test(req.headers['content-type'] || '')) return 'send JSON';
    return null;
  }
-+// DEPARTMENTS: the page learns the pack, the departments that are off and the wings before the bundle runs.
-+// JSON in a <script> is escaped so a pack's text can never close the tag.
++// DEPARTMENTS: the page learns the org, the departments that are off and the wings before the bundle runs.
++// JSON in a <script> is escaped so an org file's text can never close the tag.
 +// The page also gets THIS office's brain graph: the one baked in at build time is the main ./brain, and a wing
 +// must never show another office's note titles.
 +const OFFICE_JS = () => {
 +  const o = globalThis.OFFICE, prof = pageProfile(o, AGENTS_FLOOR, cfg.name);
 +  const safe = v => JSON.stringify(v).replace(/</g, '\\u003c').replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
-+  return `<script>window.OFFICE=${safe({ pack: o.pack, off: o.off, wing: o.wing, wings: o.wings, graph })};${prof ? `window.PROFILE=${safe(prof)};` : ''}</script>`;
++  return `<script>window.OFFICE=${safe({ org: o.org, off: o.off, wing: o.wing, wings: o.wings, graph })};${prof ? `window.PROFILE=${safe(prof)};` : ''}</script>`;
 +};
 +const officePage = page => page.replace('<head>', () => '<head>' + OFFICE_JS());
 +for (const w of globalThis.OFFICE.problems) console.warn('departments:', w);
@@ -357,29 +428,32 @@ index d1829d9..849fe8d 100644
      }
      if (url.pathname === '/api/health') return json(res, 200, { ok: true, version, backend, model: cfg.model, modelName: modelName(cfg.model), models: MODEL_KEYS, effort: cfg.effort || '', efforts: EFFORT_KEYS, name: cfg.name, brain: BRAIN, notes: graph.notes, depts: DEPT_KEYS,
        agents: agentsOut(), setup: setupMap(), routines: (l => ({ count: l.length, paused: l.filter(r => r.paused).length, depts: routines.ALLOWED }))(loadRoutines()), roster: { customised: roster.customised, briefed: roster.briefed, files: roster.files, problems: roster.problems }, skills: (({ count, shipped, brain, problems }) => ({ count, shipped, brain, problems }))(skills.summary()), tools: backend === 'claude-cli', mcp: mcp.summary(), teams: TEAMS, browser: mcp.summary().browser });
-+    if (url.pathname === '/api/departments' && req.method === 'GET') { // DEPARTMENTS: what fills the floor, what's on, the other wings
-+      const o = globalThis.OFFICE, packs = [{ name: 'agency', title: 'Agency (the original six)' }, ...listPacks().map(n => ({ name: n, title: readPack(n).pack?.title || n }))];
-+      return json(res, 200, { pack: o.pack?.name || 'agency', packs, wing: o.wing, wings: o.wings, problems: o.problems,
-+        slots: ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery'].map(k => ({ key: k, name: DEPTS[k].name, chip: DEPTS[k].chip, on: !DEPTS[k].off, seats: AGENTS_FLOOR.filter(a => a.dept === k).length })) });
++    if (url.pathname === '/api/departments' && req.method === 'GET') { // DEPARTMENTS: which org, what's on, the other wings
++      const o = globalThis.OFFICE, orgs = [{ name: '', title: "AJ's agency (the original six)" }, ...listOrgs().map(n => ({ name: n, title: readOrg(n).org?.title || n }))];
++      return json(res, 200, { org: o.org?.name || '', orgs, wing: o.wing, wings: o.wings, problems: o.problems,
++        slots: Object.keys(DEPTS).filter(k => k !== 'brain').map(k => ({ key: k, name: DEPTS[k].name, chip: DEPTS[k].chip, on: !DEPTS[k].off, boss: !!DEPTS[k].boss, teams: DEPTS[k].teams || [], seats: AGENTS_FLOOR.filter(a => a.dept === k).length })) });
 +    }
-+    if (url.pathname === '/api/departments' && req.method === 'POST') { // writes office.config.local.json; applies on restart
-+      const b = await body(req), SL = ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery'];
-+      const pack = String(b.pack || 'agency');
-+      if (pack !== 'agency' && !listPacks().includes(pack)) return json(res, 400, { error: 'no such pack in packs/' });
-+      const off = Array.isArray(b.off) ? [...new Set(b.off.map(String))].filter(k => SL.includes(k)) : [];
-+      if (off.length === SL.length) return json(res, 400, { error: 'at least one department stays on' });
++    if (url.pathname === '/api/departments' && req.method === 'POST') { // writes this office's settings file; applies on restart
++      const b = await body(req);
++      const org = String(b.org || '');
++      if (org && !listOrgs().includes(org)) return json(res, 400, { error: 'no such org in orgs/' });
++      const keys = org ? (readOrg(org).org?.departments.map(d => d.key) || []) : ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery'];
++      if (!keys.length) return json(res, 400, { error: `orgs/${org}.json has problems: ${readOrg(org).problems.join('; ')}` });
++      const off = Array.isArray(b.off) ? [...new Set(b.off.map(String))].filter(k => keys.includes(k)) : [];
++      if (off.length >= keys.length) return json(res, 400, { error: 'at least one department stays on' });
 +      const p = LOCAL_CONFIG;
-+      let cur = {}; try { cur = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') return json(res, 409, { error: '${path.basename(p)} is not valid JSON — fix it by hand first' }); }
-+      cur.pack = pack; cur.departments = { ...(cur.departments || {}) };
-+      for (const k of SL) cur.departments[k] = { ...(cur.departments[k] || {}), on: !off.includes(k) };
++      let cur = {}; try { cur = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { if (e.code !== 'ENOENT') return json(res, 409, { error: `${path.basename(p)} is not valid JSON — fix it by hand first` }); }
++      if (org) cur.org = org; else delete cur.org;
++      cur.departments = { ...(cur.departments || {}) };
++      for (const k of keys) cur.departments[k] = { ...(cur.departments[k] || {}), on: !off.includes(k) };
 +      fs.writeFileSync(p, JSON.stringify(cur, null, 2) + '\n');
 +      const next = buildOffice({ ...cfg, ...cur }); // what the next start will see
-+      return json(res, 200, { saved: true, restart: true, file: path.basename(p), pack, off: next.off, problems: next.problems, overridden: ['AO_PACK', 'AO_OFF'].filter(k => process.env[k] !== undefined) });
++      return json(res, 200, { saved: true, restart: true, file: path.basename(p), org, off: next.off, problems: next.problems, overridden: ['AO_ORG', 'AO_OFF'].filter(k => process.env[k] !== undefined) });
 +    }
      if (url.pathname === '/api/agents') return json(res, 200, { agents: agentsOut(), problems: roster.problems, files: roster.files });
      if (url.pathname === '/api/skills') return json(res, 200, refreshSkills().summary()); // reloads from disk: edit a skill, hit this, see it
      if (url.pathname === '/api/lessons') return json(res, 200, { dir: learn.dir(BRAIN), agents: AGENTS.map(a => ({ id: a.id, name: a.name, ...learn.read(BRAIN, a.id) })).filter(x => x.rules.length || x.oneOffs.length) });
-@@ -490,6 +521,7 @@ const server = http.createServer(async (req, res) => {
+@@ -490,6 +537,7 @@ const server = http.createServer(async (req, res) => {
      if (url.pathname === '/api/routines' && req.method === 'POST') {
        const b = await body(req);
        if (!DEPTS[b.dept] || b.dept === 'brain') return json(res, 400, { error: 'unknown department' });
@@ -387,14 +461,34 @@ index d1829d9..849fe8d 100644
        if (!routines.ALLOWED.includes(b.dept)) return json(res, 400, { error: routines.refusal(b.dept), refused: true });
        const r = await makeRoutine({ dept: b.dept, text: b.text, when: b.when, agent: b.agent, needsOk: b.needsOk, model: b.model, effort: b.effort });
        return json(res, r.error ? 400 : 200, r);
-@@ -513,6 +545,7 @@ const server = http.createServer(async (req, res) => {
+@@ -511,16 +559,24 @@ const server = http.createServer(async (req, res) => {
+       editRoutine(r.id, patch); return json(res, 200, { ok: true, routines: loadRoutines() });
+     }
      if (url.pathname === '/api/tasks' && req.method === 'POST') {
-       const { dept, text, model, effort, team, at } = await body(req);
+-      const { dept, text, model, effort, team, at } = await body(req);
++      let { dept, text, model, effort, team, at } = await body(req);
        if (!DEPTS[dept] || dept === 'brain') return json(res, 400, { error: 'unknown department' });
 +      if (DEPTS[dept].off) return json(res, 400, { error: `${DEPTS[dept].name} is switched off in this office`, refused: true });
        if (!text || !String(text).trim()) return json(res, 400, { error: 'empty task' });
        const dueAt = at ? (typeof at === 'number' ? at : Date.parse(at)) : null; // V3.2.1: a task for a date
        if (at && !(dueAt > 0)) return json(res, 400, { error: 'at must be a time (ms or ISO)' });
+       if (dueAt && dueAt < Date.now() - 60000) return json(res, 400, { error: 'that time has passed — pick one that is still ahead' });
++      let routedBy;
++      if (DEPTS[dept].boss) { // the Boss picks the department; the whole department then takes it
++        const from = dept, b = await bossRoute(String(text).trim()); dept = b.dept;
++        if (dept !== from) routedBy = { by: leadOf(from).id, name: leadOf(from).name, why: b.why };
++        console.log(`  boss → ${DEPTS[dept].name}${b.why ? ': ' + b.why : ''}`);
++      }
+       const r = await route(dept, String(text).trim());
+-      const asTeam = TEAMS.enabled && (team === true || teams.intent(text)); // V3.2 (16 Sep): TEAM in the bar, or "as a team" in the sentence → the lead owns it and splits it
++      const ORG_ON = !!globalThis.OFFICE.org; // in your org a department works as a team unless TEAM is switched off
++      const asTeam = TEAMS.enabled && AGENTS.filter(a => a.department === dept).length > 1 && (team === true || (ORG_ON && team !== false) || teams.intent(text)); // V3.2 (16 Sep): TEAM in the bar, or "as a team" in the sentence → the lead owns it and splits it
+       const task = { id: nid(), dept, agent: asTeam ? leadOf(dept).id : r.agent, title: r.title, text: String(text).trim(), plan: r.plan, eta: r.eta, why: asTeam ? `team — ${leadOf(dept).name} splits it across the desks` : r.why, state: 'next', addedAt: Date.now(), by: 'you', model: normModel(model) || undefined, effort: normEffort(effort) || undefined, // model/effort: set on this task (beats routine, agent, office)
+-        team: asTeam ? { lead: leadOf(dept).id, asked: team === true ? 'you' : 'text' } : undefined };
++        team: asTeam ? { lead: leadOf(dept).id, asked: team === true ? 'you' : routedBy ? 'boss' : ORG_ON && team !== false ? 'department' : 'text' } : undefined, routedBy };
+       if (dueAt) { task.state = 'scheduled'; task.dueAt = dueAt; task.needsOk = r.needsOk; } // waits for its minute; needsOk decides whether it then waits for the OK
+       const list = load(); list.push(task); save(list);
+       console.log(`+ ${task.id} → ${task.agent}: ${task.title}${asTeam ? ' (team)' : ''}${dueAt ? ' · scheduled ' + untilText(dueAt) : ''}`);
 diff --git a/src/brain.js b/src/brain.js
 index 87e3009..5b8ca53 100644
 --- a/src/brain.js
@@ -468,15 +562,15 @@ index 1716a99..a16fb9c 100644
  applyData({ DEPTS, AGENTS, BILLBOARDS, APPROVAL_ASKS, APPROVAL_BY_AGENT, WORKLINES });
 diff --git a/src/depts.js b/src/depts.js
 new file mode 100644
-index 0000000..377a79d
+index 0000000..27b4aa8
 --- /dev/null
 +++ b/src/depts.js
 @@ -0,0 +1,86 @@
-+// DEPARTMENTS panel (Oct 2026): which pack fills the floor, which departments are on, and the
++// DEPARTMENTS panel (Oct 2026): which org fills the floor, which departments are on, and the
 +// other wings (offices) on this machine. Changes are written to office.config.local.json by the
 +// server and take effect when the office restarts: the roster, routes and runs are all read once.
 +import { DEPTS } from './data.js';
-+import { OFFICE, SLOTS } from './office.js';
++import { OFFICE } from './office.js';
 +
 +const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 +
@@ -500,9 +594,9 @@ index 0000000..377a79d
 +  let state = null, draft = null, msg = '';
 +
 +  const local = () => ({
-+    pack: (OFFICE && OFFICE.pack && OFFICE.pack.name) || 'agency',
-+    packs: [{ name: 'agency', title: 'Agency (the original six)' }],
-+    slots: SLOTS.map(k => ({ key: k, name: (DEPTS[k] && DEPTS[k].name) || k, chip: DEPTS[k] && DEPTS[k].chip, on: !(DEPTS[k] && DEPTS[k].off), seats: 0 })),
++    org: (OFFICE && OFFICE.org && OFFICE.org.name) || '',
++    orgs: [{ name: (OFFICE && OFFICE.org && OFFICE.org.name) || '', title: (OFFICE && OFFICE.org && OFFICE.org.title) || "AJ's agency (the original six)" }],
++    slots: Object.keys(DEPTS).filter(k => k !== 'brain').map(k => ({ key: k, name: DEPTS[k].name, chip: DEPTS[k].chip, on: !DEPTS[k].off, boss: !!DEPTS[k].boss, teams: DEPTS[k].teams || [], seats: 0 })),
 +    wing: (OFFICE && OFFICE.wing) || '', wings,
 +  });
 +  async function load() {
@@ -511,18 +605,18 @@ index 0000000..377a79d
 +  }
 +  function render() {
 +    const s = state, d = draft;
-+    const changed = d.pack !== s.pack || s.slots.some(x => d.on[x.key] !== x.on);
++    const changed = d.org !== s.org || s.slots.some(x => d.on[x.key] !== x.on);
 +    const onCount = Object.values(d.on).filter(Boolean).length;
 +    pane.innerHTML = `
 +      <div class="dp-head"><div><div class="dp-k">${esc(s.wing || 'THIS OFFICE')}</div><h2>Departments</h2></div>
 +        <button class="dp-x" type="button" aria-label="close">×</button></div>
-+      <label class="dp-k" for="dpPack">WHAT FILLS THE FLOOR</label>
-+      <select id="dpPack" ${live ? '' : 'disabled'}>${s.packs.map(p => `<option value="${esc(p.name)}"${p.name === d.pack ? ' selected' : ''}>${esc(p.title)}</option>`).join('')}</select>
-+      ${d.pack !== s.pack ? `<p class="dp-note">The six departments, their desks and names change to this pack. Notes, tasks and routines stay in this office's brain.</p>` : ''}
-+      <div class="dp-k">ON THE FLOOR · ${onCount} OF 6</div>
++      <label class="dp-k" for="dpPack">WHOSE DEPARTMENTS</label>
++      <select id="dpPack" ${live ? '' : 'disabled'}>${s.orgs.map(p => `<option value="${esc(p.name)}"${p.name === d.org ? ' selected' : ''}>${esc(p.title)}</option>`).join('')}</select>
++      ${d.org !== s.org ? `<p class="dp-note">The floor is rebuilt from ${d.org ? `orgs/${esc(d.org)}.json` : "AJ's six departments"}. Notes, tasks and routines stay in this office's brain.</p>` : ''}
++      <div class="dp-k">ON THE FLOOR · ${onCount} OF ${s.slots.length}</div>
 +      <ul class="dp-list">${s.slots.map(x => `
 +        <li><span class="dot" style="background:${esc(x.chip || '#ccc')}"></span>
-+          <span class="nm">${esc(x.name)}${x.seats ? `<small>${x.seats} desks</small>` : ''}</span>
++          <span class="nm">${esc(x.name)}${x.boss ? ' <em>HANDS OUT WORK</em>' : ''}${x.seats || x.teams.length ? `<small>${[x.seats ? x.seats + ' people' : '', x.teams.length ? x.teams.map(t => t.charAt(0) + t.slice(1).toLowerCase()).join(' · ') : ''].filter(Boolean).join(' — ')}</small>` : ''}</span>
 +          <span class="st">${d.on[x.key] ? 'On' : 'Off'}</span>
 +          <button type="button" role="switch" aria-checked="${d.on[x.key]}" aria-label="${esc(x.name)}" data-k="${esc(x.key)}" ${live ? '' : 'disabled'}><i></i></button></li>`).join('')}
 +      </ul>
@@ -533,7 +627,7 @@ index 0000000..377a79d
 +           <button class="dp-save" type="button" ${changed ? '' : 'disabled'}>SAVE</button>`
 +        : `<span class="dp-msg">Start the office with <code>npm start</code> to change departments.</span>`}</div>`;
 +    pane.querySelector('.dp-x').onclick = close;
-+    const sel = pane.querySelector('#dpPack'); if (sel) sel.onchange = () => { draft.pack = sel.value; msg = ''; render(); };
++    const sel = pane.querySelector('#dpPack'); if (sel) sel.onchange = () => { draft.org = sel.value; msg = ''; render(); };
 +    pane.querySelectorAll('[role=switch]').forEach(b => b.onclick = () => {
 +      const k = b.dataset.k, next = !draft.on[k];
 +      if (!next && Object.values(draft.on).filter(Boolean).length === 1) { msg = 'At least one department stays on.'; render(); return; }
@@ -542,7 +636,7 @@ index 0000000..377a79d
 +    const save = pane.querySelector('.dp-save'); if (save) save.onclick = async () => {
 +      save.disabled = true; msg = 'Saving…'; render();
 +      try {
-+        const r = await fetch('/api/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ pack: draft.pack, off: SLOTS.filter(k => !draft.on[k]) }) });
++        const r = await fetch('/api/departments', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ org: draft.org, off: draft.org === state.org ? state.slots.map(x => x.key).filter(k => !draft.on[k]) : [] }) });
 +        const j = await r.json(); if (!r.ok) throw new Error(j.error || 'not saved');
 +        msg = `Saved to ${j.file}. Restart the office to see the new floor.` + (j.overridden.length ? ` Note: ${j.overridden.join(' and ')} set when it started will still win.` : '');
 +      } catch (e) { msg = 'Not saved: ' + e.message; }
@@ -551,7 +645,7 @@ index 0000000..377a79d
 +  }
 +  async function open() {
 +    await load();
-+    draft = { pack: state.pack, on: Object.fromEntries(state.slots.map(x => [x.key, x.on])) }; msg = '';
++    draft = { org: state.org, on: Object.fromEntries(state.slots.map(x => [x.key, x.on])) }; msg = '';
 +    render(); document.body.classList.add('dpOpen'); pane.querySelector('.dp-x').focus();
 +  }
 +  function close() { document.body.classList.remove('dpOpen'); btn.focus(); }
@@ -559,28 +653,51 @@ index 0000000..377a79d
 +  document.addEventListener('keydown', e => { if (e.key === 'Escape' && document.body.classList.contains('dpOpen')) close(); });
 +}
 diff --git a/src/main.js b/src/main.js
-index 94c47a2..0dc6894 100644
+index 94c47a2..7010e59 100644
 --- a/src/main.js
 +++ b/src/main.js
-@@ -5,6 +5,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+@@ -5,6 +5,8 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
  import { TOKENS, DEPTS, DEPT_KEYS, AGENTS, LAYOUT, WORKLINES, APPROVAL_ASKS, APPROVAL_BY_AGENT } from './data.js';
  import { hasScreens, makeScreen } from './screens.js'; // live screens (14 Sep): no-op without window.SCREENS
  import { V1, FILE_GEN, STATS, KPIS, P, rnd, ri, person, money } from './v1data.js';
 +import { initDepartments } from './depts.js';
++import { OFFICE } from './office.js';
  import { PROFILE, profileRows, profileTickKpi, profileMockup, applyTopbar } from './profile.js';
  import {
    PLINTH_H, mat, rbox, makePlinth, makeFloorTitle, makeDesk, makeChair,
-@@ -155,7 +156,8 @@ for (const [key_, L] of Object.entries(LAYOUT)) {
+@@ -45,7 +47,11 @@ const CAM_DIST = 220;
+ // float above their back rows instead of being shoved out to the screen edges.
+ // V3.3: the Task Status panel owns the right ~430px at every zoom, so the overview target slides
+ // along screen-right by half the panel width — the scene sits centred in what is left.
+-const OVERVIEW = { base: [-9, 0, -9], zoom: 0.8 }; // (-9,-9) shifts the scene straight DOWN the screen, no sideways drift
++const OVERVIEW = { base: [-9, 0, -9], zoom: 0.8 };
++{ // YOUR DEPARTMENTS: a generated ring can be bigger than AJ's six; pull the overview back to fit it
++  const ext = Math.max(...Object.values(LAYOUT).map(L => Math.hypot(...L.pos) + Math.hypot(L.w, L.d) / 2));
++  if (OFFICE && OFFICE.org) OVERVIEW.zoom = Math.min(0.8, 0.8 * 63 / ext);
++} // (-9,-9) shifts the scene straight DOWN the screen, no sideways drift
+ const SR_ = new THREE.Vector3(1, 0, -1).normalize();
+ function overviewPos() {
+   const pw = (tasks ? tasks.panelWidth() : 400) + 30;
+@@ -149,14 +155,15 @@ for (const [key_, L] of Object.entries(LAYOUT)) {
+ 
+   // V3.8 detail pass: a rug under the desk cluster and one prop per department on the clear back strip
+   if (key_ !== 'brain') {
+-    const rows = AGENTS.filter(a => a.dept === key_).map(a => (a.grid[1] - 1) * 6.4 - 1);
++    const rows = AGENTS.filter(a => a.dept === key_).map(a => a.gz ?? (a.grid[1] - 1) * 6.4 - 1);
+     const z0 = Math.min(...rows) - 3.4, z1 = Math.max(...rows) + 3.6;
+     const rug = makeRug(L.w - 3.2, z1 - z0, dept.floor, dept.chip);
      rug.position.set(0, 0.12, (z0 + z1) / 2); rug.userData.dept = key_;
      g.add(rug);
      const PROP = { emails: makeMailSorter, sales: makeWhiteboard, marketing: makeMoodBoard, fin: makeFilingCabinets, delivery: makeShelf, ops: makeServerRack };
 -    const prop = PROP[key_](dept.chip);
+-    prop.position.set(-L.w / 2 + 2.2, 0.12, -8); // back-left corner: clear of the desks and of the lead's name pill
 +    const BY_NAME = { mailsorter: makeMailSorter, whiteboard: makeWhiteboard, moodboard: makeMoodBoard, cabinets: makeFilingCabinets, shelf: makeShelf, rack: makeServerRack }; // a pack can pick a prop by name
-+    const prop = (BY_NAME[dept.prop] || PROP[key_])(dept.chip);
-     prop.position.set(-L.w / 2 + 2.2, 0.12, -8); // back-left corner: clear of the desks and of the lead's name pill
++    const prop = (BY_NAME[dept.prop] || PROP[key_] || Object.values(BY_NAME)[Math.max(0, DEPT_KEYS.indexOf(key_)) % 6])(dept.chip);
++    prop.position.set(-L.w / 2 + 2.2, 0.12, L.ring ? -L.d / 2 + 6.2 : -8); // back-left corner: clear of the desks and of the lead's name pill
      prop.rotation.y = Math.PI / 4;
      const pool = makeContactShadow(4.2, 2.4, 0.38); pool.position.set(0, 0.015, 0.2); prop.add(pool);
-@@ -167,6 +169,19 @@ for (const [key_, L] of Object.entries(LAYOUT)) {
+     prop.traverse(o => { if (o.isMesh) o.userData.dept = key_; });
+@@ -167,6 +174,19 @@ for (const [key_, L] of Object.entries(LAYOUT)) {
    scene.add(g);
    deptRT[key_] = { group: g, L };
  }
@@ -600,7 +717,57 @@ index 94c47a2..0dc6894 100644
  
  // brain centre (V3.6, AJ 6 Sep 2026): the particle nebula is RETIRED. The vault's wiki-link graph
  // is etched into the pod floor (src/brain.js); reads glint, writes add notes, G opens the full graph.
-@@ -298,10 +313,11 @@ const mcp = {
+@@ -210,8 +230,13 @@ function tickSweep(now) {
+ for (const k of DEPT_KEYS) {
+   const L = LAYOUT[k];
+   const sx = Math.sign(L.pos[0]), sz = Math.sign(L.pos[1]);
+-  const from = [L.pos[0] - sx * (L.w / 2 - 1), L.pos[1] - sz * (L.d / 2 - 1)];
+-  const to = [sx * 6.5, sz * 6.5];
++  let from = [L.pos[0] - sx * (L.w / 2 - 1), L.pos[1] - sz * (L.d / 2 - 1)];
++  let to = [sx * 6.5, sz * 6.5];
++  if (L.ring) { // a generated pod: straight in toward the brain, from the edge that faces it
++    const r = Math.hypot(...L.pos), ux = -L.pos[0] / r, uz = -L.pos[1] / r;
++    const t = Math.min(Math.abs(ux) > 1e-6 ? (L.w / 2 - 0.5) / Math.abs(ux) : Infinity, Math.abs(uz) > 1e-6 ? (L.d / 2 - 0.5) / Math.abs(uz) : Infinity);
++    from = [L.pos[0] + ux * t, L.pos[1] + uz * t]; to = [-ux * 7.5, -uz * 7.5];
++  }
+   const walk = makeWalkway(from, to);
+   walk.userData.dept = k; walk.userData.part = 'walkway';
+   scene.add(walk);
+@@ -231,9 +256,9 @@ for (const a of AGENTS) {
+   const dRT = deptRT[a.dept];
+   const dept = DEPTS[a.dept];
+   const L = dRT.L;
+-  const cols = COLS[a.dept];
++  const cols = a.cols || COLS[a.dept] || 2;
+   const gx = (a.grid[0] - (cols - 1) / 2) * 8.6;
+-  const gz = (a.grid[1] - 1) * 6.4 - 1;
++  const gz = a.gz ?? (a.grid[1] - 1) * 6.4 - 1;
+   const base = new THREE.Vector3(L.pos[0] + gx, 0.12, L.pos[1] + gz);
+ 
+   // whole station rotated 45° so monitor screens face the camera square-on
+@@ -280,6 +305,21 @@ for (const a of AGENTS) {
+   };
+ }
+ 
++// YOUR DEPARTMENTS: each sub-team gets a small tag just past the last desk of its first row,
++// shown when you lean in (an HTML tag reads straight; text painted on the floor reads skewed)
++const teamTags = [];
++for (const k of DEPT_KEYS) {
++  const L = LAYOUT[k], teams = DEPTS[k].teams; if (!L || !L.ring || !teams || !teams.length) continue;
++  for (const t of teams) {
++    const mates = AGENTS.filter(a => a.dept === k && a.team === t); if (!mates.length) continue;
++    const z0 = Math.min(...mates.map(a => a.gz)), first = mates.filter(a => a.gz === z0);
++    const xEnd = Math.max(...first.map(a => (a.grid[0] - ((a.cols || 2) - 1) / 2) * 8.6)) + 4.4; // just past the row's last desk
++    const el = document.createElement('div'); el.className = 'teamTag'; el.textContent = t;
++    el.style.setProperty('--chip', DEPTS[k].chip); hud.appendChild(el);
++    teamTags.push({ el, dept: k, at: new THREE.Vector3(L.pos[0] + Math.min(xEnd, L.w / 2 - 0.4), 0.2, L.pos[1] + z0 - 1.2) });
++  }
++}
++
+ /* CONNECTORS — per-dept dock of MCP logos with back-and-forth traffic (AJ's spec, 2 Aug rev 2)
+    V3.1: served, the list is the user's REAL MCP servers (GET /api/mcp) — the strip waits for it.
+    Opened as a file the demo list plays at once. `mcp` is a thin proxy so the rest of the office
+@@ -298,10 +338,11 @@ const mcp = {
  };
  let mcpUsage = null;
  loadConnectors().then(c => { mcpImpl = initMcp({ scene, hud, LAYOUT, DEPTS, FR, R, connectors: c }); if (mcpDark) mcpImpl.setDark(true); if (mcpUsage) mcpImpl.setUsage(mcpUsage); });
@@ -609,11 +776,21 @@ index 94c47a2..0dc6894 100644
  
  // plants on outer corners
 -for (const k of ['emails', 'sales', 'marketing', 'ops', 'delivery']) {
-+for (const k of ['emails', 'sales', 'marketing', 'ops', 'delivery'].filter(k => LAYOUT[k])) {
++for (const k of (OFFICE && OFFICE.org ? DEPT_KEYS : ['emails', 'sales', 'marketing', 'ops', 'delivery']).filter(k => LAYOUT[k])) {
    const L = LAYOUT[k];
    const sx = Math.sign(L.pos[0]), sz = Math.sign(L.pos[1]);
    const p = makePlant();
-@@ -421,7 +437,7 @@ for (const k of [...DEPT_KEYS, 'brain']) {
+@@ -416,12 +457,17 @@ for (const k of [...DEPT_KEYS, 'brain']) {
+     fin:       [43.5, 4, 17],      // side RIGHT
+     brain:     [-5.5, 3.2, -5.5],  // just above the pod's back corner
+   };
++  if (!ANCHOR[k]) { // a generated pod: upper half of the screen → card over its back edge; lower half → hanging under its front face
++    const L = LAYOUT[k], up = L.pos[0] + L.pos[1] < 0;
++    ANCHOR[k] = up ? [L.pos[0], 10.6, L.pos[1] - L.d / 2 + 5.4] : [L.pos[0] - 0.2 * L.w, 0, L.pos[1] + L.d / 2 + 3];
++    if (!up) deptRT[k].belowBadge = true;
++  }
+   deptRT[k].badgeAnchor = new THREE.Vector3(...ANCHOR[k]);
+   if (k === 'fin') deptRT[k].sideBadge = true;
    if (k === 'ops' || k === 'sales') deptRT[k].belowBadge = true; // V3.8: these two used to sit on their own desks
  }
  function updateBillboards() {
@@ -622,67 +799,214 @@ index 94c47a2..0dc6894 100644
      BB_ROWS[k].forEach((row, i) => {
        const nv = String(row[1]());
        if (nv !== deptRT[k].vals[i]) {
+@@ -536,9 +582,9 @@ addEventListener('keydown', (e) => {
+   else if (e.key === '-' || e.key === '_') zoomStep(1 / 1.5);
+   else if (e.key === '0') zoomOut();
+   else if (e.key === 'x' || e.key === 'X') { if (!meeting) planMeeting(performance.now()); }
+-  else if (e.key >= '1' && e.key <= '6') { // jump straight to a department
+-    const dept = ['marketing', 'emails', 'sales', 'ops', 'fin', 'delivery'][+e.key - 1];
+-    if (focused !== dept) enterFocus(dept);
++  else if (e.key >= '1' && e.key <= '9') { // jump straight to a department
++    const dept = (OFFICE && OFFICE.org ? DEPT_KEYS : ['marketing', 'emails', 'sales', 'ops', 'fin', 'delivery'])[+e.key - 1];
++    if (dept && LAYOUT[dept] && focused !== dept) enterFocus(dept);
+   }
+   else if (e.key === 'c' || e.key === 'C') { // in a department: open its (lead) agent's chat
+     if (focused && focused !== 'brain') {
+@@ -618,6 +664,7 @@ const mMsgs = document.getElementById('mMsgs');
+ let modalOpen = null, modalTab = 'chat'; // modalOpen = agent id open in the rail slide-over
+ // V3.3: the rail docks LEFT for every department — the task panel has the right side
+ const RAIL_SIDE = { marketing: 'left', emails: 'left', sales: 'left', ops: 'left', fin: 'left', delivery: 'left' };
++for (const k of DEPT_KEYS) RAIL_SIDE[k] = RAIL_SIDE[k] || 'left'; // YOUR DEPARTMENTS: the rail docks left for every pod
+ const SCREEN_RIGHT = new THREE.Vector3(1, 0, -1).normalize();
+ 
+ function ensureChat(id) {
+@@ -1318,6 +1365,12 @@ function tickLOD() {
+   const pillA = smooth(1.45, 1.85, z); // pills stay on at near — they name the agents
+   // billboards persist at every zoom (v1 rule) — slightly larger when far, compact when near
+   const badgeScale = 1.02 - 0.3 * smooth(1.2, 2.6, z);
++  for (const t of teamTags) { // sub-team tags: only when leaning in, and only for the pod in view when one is focused
++    const a = pillA * (focused && focused !== t.dept ? 0 : 1);
++    if (a < 0.02) { t.el.style.display = 'none'; continue; }
++    const [sx, sy] = toScreen(t.at); t.el.style.display = 'block'; t.el.style.opacity = a;
++    t.el.style.transform = `translate(${sx}px, ${sy}px) translate(6px, -50%)`;
++  }
+   for (const [k, d] of Object.entries(deptRT)) {
+     if (focused === k && k !== 'brain') continue; // this billboard is docked in the rail
+     let [sx, sy] = toScreen(d.badgeAnchor);
 diff --git a/src/mcp.js b/src/mcp.js
-index ddff8aa..7a647b2 100644
+index ddff8aa..8a614a0 100644
 --- a/src/mcp.js
 +++ b/src/mcp.js
-@@ -60,7 +60,7 @@ function smooth(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
+@@ -60,7 +60,8 @@ function smooth(a, b, x) { const t = Math.max(0, Math.min(1, (x - a) / (b - a)))
  
  export function initMcp({ scene, hud, LAYOUT, DEPTS, FR, R, connectors = null }) {
    const LIVE = !!(connectors && connectors.live);
 -  const BY_DEPT = LIVE ? connectors.byDept : MCP_BY_DEPT;
++  for (const k of Object.keys(LAYOUT)) if (k !== 'brain' && !DOCKS[k]) DOCKS[k] = { dir: SR.clone().negate(), dist: LAYOUT[k].w / 2 + 3, h: 8.0 }; // a generated pod: dock to its screen-left
 +  const BY_DEPT = Object.fromEntries(Object.entries(LIVE ? connectors.byDept : MCP_BY_DEPT).filter(([d]) => LAYOUT[d])); // a department that is off has no pod to wire
    const LOGOS = LIVE ? { ...MCP_LOGOS, ...connectors.logos } : MCP_LOGOS;
    const AGENT_TOOLS = (LIVE && connectors.agentTools) || AGENT_MCP;
    const STATUS = (LIVE && connectors.status) || {};
+@@ -206,7 +207,7 @@ export function initMcp({ scene, hud, LAYOUT, DEPTS, FR, R, connectors = null })
+   const PORT_CORNER = { marketing: [-1, 1], emails: [-1, -1], sales: [1, -1], ops: [1, -1], fin: [1, -1], delivery: [-1, -1] };
+   const wires = {}, wirePulses = [];
+   Object.keys(BY_DEPT).forEach((dept, ji) => {
+-    const L = LAYOUT[dept], [cx, cz] = PORT_CORNER[dept];
++    const L = LAYOUT[dept], [cx, cz] = PORT_CORNER[dept] || [-1, -1];
+     const path = document.createElementNS(svgNS, 'path');
+     path.setAttribute('fill', 'none');
+     path.setAttribute('stroke', DEPTS[dept].chip);
+@@ -256,7 +257,7 @@ export function initMcp({ scene, hud, LAYOUT, DEPTS, FR, R, connectors = null })
+     svg.appendChild(jdot);
+     const wiresOf = {};
+     Object.keys(BY_DEPT).filter(d => BY_DEPT[d].includes(key)).forEach(dept => {
+-      const L = LAYOUT[dept], [cx, cz] = PORT_CORNER[dept];
++      const L = LAYOUT[dept], [cx, cz] = PORT_CORNER[dept] || [-1, -1];
+       const path = document.createElementNS(svgNS, 'path');
+       path.setAttribute('fill', 'none');
+       path.setAttribute('stroke', ink);
 diff --git a/src/office.js b/src/office.js
 new file mode 100644
-index 0000000..4e05534
+index 0000000..312e7dc
 --- /dev/null
 +++ b/src/office.js
-@@ -0,0 +1,37 @@
-+// Agents Office — departments you choose (packs, on/off, wings).
-+// The floor has six fixed slots around the brain (emails · sales · marketing · ops · fin · delivery);
-+// their geometry is hand-tuned and stays. What sits in each slot is yours:
-+//   · a PACK (packs/<name>.json) renames the slot, recolours it and gives its seats new names, roles,
-+//     tasks and screen lines. Seats map by order onto the slot's existing seat ids, lead first; a pack
-+//     with fewer seats leaves the rest out.
-+//   · departments.<slot>.on = false takes a slot off the floor: no pod, no agents, no tasks, no runs.
-+//   · a WING is another office (its own process, brain folder, data folder and sandbox); the top bar
-+//     links to it, nothing else is shared. See office.mjs.
+@@ -0,0 +1,93 @@
++// Agents Office — YOUR departments (Oct 2026).
++// Without an org file the office is AJ's agency: six fixed pods, 35 desks, unchanged.
++// With one (orgs/<name>.json, chosen by `"org"` in the settings), the office is built ONLY from it:
++//   · any number of departments, each owning a domain of work (e.g. MILITARY does the military
++//     coding, documents and analysis), each made of sub-teams, each sub-team of people;
++//   · one department can be the BOSS: give it work and it decides which department does it;
++//   · a department grows by adding sub-teams and people, and its pod grows to fit;
++//   · departments.<key>.on = false takes one off the floor (no desks, no tasks, no runs);
++//   · a WING is a separate office (own process, brain, data, sandbox), linked from the top bar.
 +// The server builds globalThis.OFFICE (office.mjs) and writes it into the page; without it (the
-+// double-click build) everything below is a no-op and the office is AJ's agency, unchanged.
++// double-click build) everything below is a no-op.
 +export const OFFICE = (typeof globalThis !== 'undefined' && globalThis.OFFICE) || null;
-+export const SLOTS = ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery'];
++export const SLOTS = ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery']; // AJ's six, when there is no org
 +
-+export function applyOffice({ DEPTS, DEPT_KEYS, AGENTS, LAYOUT, BILLBOARDS, APPROVAL_ASKS, APPROVAL_BY_AGENT, WORKLINES }) {
-+  if (!OFFICE) return;
-+  const pack = OFFICE.pack || null;
-+  if (pack) for (const k of SLOTS) {
-+    const s = pack.slots && pack.slots[k]; if (!s) continue;
-+    if (s.name) { DEPTS[k].name = s.name; DEPTS[k].short = s.name; }
-+    for (const c of ['chip', 'ink', 'floor']) if (s[c]) DEPTS[k][c] = s[c];
-+    if (s.prop) DEPTS[k].prop = s.prop;
-+    const seats = AGENTS.filter(a => a.dept === k);
-+    seats.forEach((a, i) => {
-+      const p = (s.seats || [])[i];
-+      if (!p) { a._drop = true; return; }
-+      a.name = String(p.name).toUpperCase().slice(0, 32); a.role = p.role || ''; a.does = p.does || '';
-+    });
++// colours for departments that don't name their own: AJ's chips, then a few more in the same family
++export const PALETTE = [
++  { chip: '#5ADEB7', ink: '#1E9070', floor: '#E9F6EF' }, { chip: '#EADC8F', ink: '#A08A1E', floor: '#F6F1DA' },
++  { chip: '#E69393', ink: '#C46060', floor: '#FAE9E7' }, { chip: '#BFA2E3', ink: '#7449A9', floor: '#F2ECFA' },
++  { chip: '#98A5EF', ink: '#5B66CE', floor: '#EAEDFA' }, { chip: '#8FD3F4', ink: '#2E86AB', floor: '#E6F4FB' },
++  { chip: '#F2B33D', ink: '#9A6A06', floor: '#FBF1DD' }, { chip: '#9FCF8A', ink: '#4E8A36', floor: '#EEF6E8' },
++];
++const HAIR = ['#2b2b2b', '#3b2b1d', '#111111', '#7a3b12', '#4a2a10', '#5a2d0c', '#1c1c2e', '#26140a', '#8a4a1f', '#552200'];
++const SKIN = ['#E8B98E', '#F0C9A0', '#C68B59', '#F5D5B0', '#D89F70', '#E0A878', '#B07850', '#9C6B43', '#D9A97E', '#8A5A32'];
++const DESK_X = 8.6, DESK_Z = 6.4;
++
++/** pod geometry for a department whose sub-teams have these sizes: the lead alone on the back
++ *  row, then each sub-team on its own row(s). { cols, rows, w, d, place: [[col,row]…] lead first } */
++export function podShape(teamSizes) {
++  const n = teamSizes.reduce((s, x) => s + x, 0) + 1;
++  const cols = n <= 9 ? 2 : n <= 16 ? 3 : 4;
++  const place = [[(cols - 1) / 2, 0]]; let row = 1;
++  for (const size of teamSizes) {
++    for (let i = 0; i < size; i++) {
++      const r = Math.floor(i / cols), inRow = Math.min(cols, size - r * cols);
++      place.push([(i % cols) + (cols - inRow) / 2, row + r]);
++    }
++    row += Math.max(1, Math.ceil(size / cols));
 +  }
++  return { cols, rows: row, w: cols * DESK_X + 3.4, d: row * DESK_Z + 4.4, place };
++}
++
++/** where the pods go: a ring around the brain, the first department at the top of the screen */
++export function ringLayout(shapes) {
++  const N = shapes.length, half = shapes.map(s => Math.hypot(s.w, s.d) / 2);
++  let R = Math.max(...half) + 18;
++  if (N > 1) for (let i = 0; i < N; i++) { const j = (i + 1) % N; R = Math.max(R, (half[i] + half[j] + 6) / (2 * Math.sin(Math.PI / N))); }
++  const a0 = Math.atan2(-1, -1); // world (-1,-1) is straight up the screen from this camera
++  return shapes.map((s, i) => { const a = a0 + i * 2 * Math.PI / N; return [Math.round(R * Math.cos(a) * 10) / 10, Math.round(R * Math.sin(a) * 10) / 10]; });
++}
++
++function applyOrg(org, { DEPTS, DEPT_KEYS, AGENTS, LAYOUT, BILLBOARDS, APPROVAL_ASKS, APPROVAL_BY_AGENT, WORKLINES }) {
++  for (const k of Object.keys(DEPTS)) if (k !== 'brain') delete DEPTS[k];
++  for (const X of [LAYOUT, BILLBOARDS, APPROVAL_ASKS, WORKLINES]) if (X) for (const k of Object.keys(X)) if (k !== 'brain') delete X[k];
++  if (APPROVAL_BY_AGENT) for (const k of Object.keys(APPROVAL_BY_AGENT)) delete APPROVAL_BY_AGENT[k];
++  DEPT_KEYS.length = 0; AGENTS.length = 0;
++  const shapes = [];
++  org.departments.forEach((d, di) => {
++    const pal = PALETTE[di % PALETTE.length];
++    DEPTS[d.key] = { name: d.name, short: d.name, chip: d.chip || pal.chip, ink: d.ink || pal.ink, floor: d.floor || pal.floor, prop: d.prop, boss: !!d.boss, about: d.about || '', teams: d.teams.map(t => t.name) };
++    DEPT_KEYS.push(d.key);
++    const shape = podShape(d.teams.map(t => t.people.length)); shapes.push(shape);
++    const people = [{ ...d.lead, lead: true, team: '' }, ...d.teams.flatMap(t => t.people.map(p => ({ ...p, lead: false, team: t.name })))];
++    people.forEach((p, i) => {
++      const h = [...p.id].reduce((s, c) => (s * 31 + c.charCodeAt(0)) >>> 0, 7);
++      const [c, r] = shape.place[i];
++      AGENTS.push({ id: p.id, name: p.name, dept: d.key, lead: p.lead, team: p.team, role: p.role || '', does: p.does || '',
++        grid: [c, r], gz: -shape.d / 2 + 7.6 + r * DESK_Z, cols: shape.cols, hair: HAIR[h % HAIR.length], skin: SKIN[(h >> 4) % SKIN.length] });
++    });
++    if (WORKLINES) WORKLINES[d.key] = (d.worklines && d.worklines.length ? d.worklines : d.teams.map(t => `${t.name.toLowerCase()}: on it`)).map(l => /^[▸✓•]/.test(l) ? l : '▸ ' + l);
++    if (APPROVAL_ASKS) APPROVAL_ASKS[d.key] = d.approvals && d.approvals.length ? d.approvals.slice() : [`Sign off ${d.name.toLowerCase()}'s latest deliverable`];
++  });
++  const pos = ringLayout(shapes);
++  org.departments.forEach((d, i) => { LAYOUT[d.key] = { pos: pos[i], w: shapes[i].w, d: shapes[i].d, ring: true }; });
++}
++
++export function applyOffice(T) {
++  if (!OFFICE) return;
++  const { DEPTS, DEPT_KEYS, AGENTS, LAYOUT, BILLBOARDS, APPROVAL_ASKS, APPROVAL_BY_AGENT, WORKLINES } = T;
++  if (OFFICE.org) applyOrg(OFFICE.org, T);
 +  const off = new Set(OFFICE.off || []);
-+  for (const a of AGENTS) if (off.has(a.dept)) a._drop = true;
-+  for (let i = AGENTS.length - 1; i >= 0; i--) if (AGENTS[i]._drop) AGENTS.splice(i, 1);
++  for (let i = AGENTS.length - 1; i >= 0; i--) if (off.has(AGENTS[i].dept)) AGENTS.splice(i, 1);
 +  for (let i = DEPT_KEYS.length - 1; i >= 0; i--) if (off.has(DEPT_KEYS[i])) DEPT_KEYS.splice(i, 1);
-+  for (const k of off) { if (LAYOUT && LAYOUT[k]) DEPTS[k].offLayout = LAYOUT[k]; if (LAYOUT) delete LAYOUT[k]; if (BILLBOARDS) delete BILLBOARDS[k]; if (APPROVAL_ASKS) delete APPROVAL_ASKS[k]; if (WORKLINES) delete WORKLINES[k]; DEPTS[k].off = true; }
++  for (const k of off) {
++    if (!DEPTS[k]) continue;
++    if (LAYOUT && LAYOUT[k]) DEPTS[k].offLayout = LAYOUT[k];
++    for (const X of [LAYOUT, BILLBOARDS, APPROVAL_ASKS, WORKLINES]) if (X) delete X[k];
++    DEPTS[k].off = true;
++  }
 +  if (APPROVAL_BY_AGENT) for (const id of Object.keys(APPROVAL_BY_AGENT)) if (!AGENTS.some(a => a.id === id)) delete APPROVAL_BY_AGENT[id];
 +}
 +export const isOn = k => !(OFFICE && (OFFICE.off || []).includes(k));
++/** the department that hands work out, if the org has one that is on */
++export const bossKey = DEPTS => Object.keys(DEPTS).find(k => DEPTS[k].boss && !DEPTS[k].off) || null;
+diff --git a/src/profile.js b/src/profile.js
+index 70d4b7e..ee77077 100644
+--- a/src/profile.js
++++ b/src/profile.js
+@@ -15,7 +15,8 @@
+ //     graph: { notes, nodes, links, floor } }
+ export const PROFILE = (typeof window !== 'undefined' && window.PROFILE && window.PROFILE.pods) ? window.PROFILE : null;
+ 
+-const DEPTS6 = ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery'];
++// the pods a profile speaks for: AJ's six, or every department of YOUR org (the org's profile names them all)
++const DEPTS6 = PROFILE ? Object.keys(PROFILE.pods) : ['emails', 'sales', 'marketing', 'ops', 'fin', 'delivery'];
+ const rnd = a => a[Math.floor(Math.random() * a.length)];
+ const ri = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+ export const titleCase = s => String(s || '').toLowerCase().replace(/(^|[\s&/-])([a-z])/g, (m, p, c) => p + c.toUpperCase());
+@@ -54,6 +55,9 @@ export function applyData({ DEPTS, AGENTS, BILLBOARDS, APPROVAL_ASKS, APPROVAL_B
+ /* ---------- v1data.js: the fake world, every agent's persona, sample files ---------- */
+ export function applyV1({ P, V1, FILE_GEN, clockStr }) {
+   if (!PROFILE) return;
++  // YOUR DEPARTMENTS: people who aren't one of AJ's 35 get a persona entry for the loop below to fill
++  const depOf = id => { const o = globalThis.OFFICE && globalThis.OFFICE.org; if (!o) return ''; for (const d of o.departments) if (d.lead.id === id || d.teams.some(t => t.people.some(p => p.id === id))) return d.key; return ''; };
++  for (const id of Object.keys(PROFILE.agents)) if (!V1.some(v => v.id === id)) V1.push({ id, name: PROFILE.agents[id].name, dept: depOf(id), shirt: '#9CA3AF', role: '', tagline: '', tasks: [], ev: [], stats: [], chat: [], fallback: [], chips: [] });
+   const W = PROFILE.world || {};
+   if (W.customers && W.customers.length) P.co = W.customers.slice();
+   if (W.competitors && W.competitors.length) P.competitor = W.competitors.slice();
 diff --git a/src/shell.html b/src/shell.html
-index b6cfa45..8081f37 100644
+index b6cfa45..93ef0fa 100644
 --- a/src/shell.html
 +++ b/src/shell.html
-@@ -237,6 +237,44 @@
+@@ -130,6 +130,13 @@
+     transform-origin: 50% 100%;
+     transition: box-shadow .4s var(--ease), border-color .4s var(--ease);
+   }
++  .teamTag { /* YOUR DEPARTMENTS: a sub-team's name beside its first row of desks */
++    position: absolute; left: 0; top: 0; display: none; pointer-events: none; white-space: nowrap;
++    font-family: var(--ui); font-size: 10px; font-weight: 700; letter-spacing: .16em; color: var(--ink);
++    padding: 3px 9px 3px 8px; border-radius: 6px; border-left: 3px solid var(--chip);
++    background: color-mix(in srgb, var(--cream) 90%, transparent); box-shadow: 0 4px 12px rgba(21,20,20,.08);
++  }
++  body.dark .teamTag { background: #1B1C21; color: var(--cream); }
+   .pill:hover { border-color: var(--ink); box-shadow: 0 8px 22px rgba(21,20,20,.18); }
+   .pill .star { color: #C8A438; margin-right: 4px; }
+ 
+@@ -237,6 +244,45 @@
    }
    #topCal:hover, body.calOpen #topCal { background: var(--ink); color: var(--cream); border-color: var(--ink); }
    body.dark #topCal { background: #1B1C21; }
@@ -708,6 +1032,7 @@ index b6cfa45..8081f37 100644
 +  #dpPane .dp-list li:first-child, #dpPane .dp-wings li:first-child { border-top: 0; }
 +  #dpPane .dot { width: 9px; height: 9px; border-radius: 5px; }
 +  #dpPane .nm { font-size: 11px; font-weight: 700; letter-spacing: .12em; }
++  #dpPane .nm em { font-style: normal; font-size: 9px; letter-spacing: .14em; padding: 1px 6px; margin-left: 4px; border-radius: 4px; background: var(--ink); color: var(--cream); }
 +  #dpPane .nm small { display: block; font-size: 11px; font-weight: 400; letter-spacing: 0; color: var(--grey); margin-top: 1px; }
 +  #dpPane .st { font-size: 12px; color: var(--grey); }
 +  #dpPane [role=switch] { width: 38px; height: 22px; border-radius: 11px; border: 0; background: rgba(21,20,20,.18); position: relative; cursor: pointer; padding: 0; }
@@ -728,10 +1053,19 @@ index b6cfa45..8081f37 100644
      align-items: center; gap: 5px; cursor: pointer;
      font-size: 12px; font-weight: 600; letter-spacing: .06em;
 diff --git a/src/tasks.js b/src/tasks.js
-index 3fdfd74..9cd7777 100644
+index 3fdfd74..acfb75d 100644
 --- a/src/tasks.js
 +++ b/src/tasks.js
-@@ -112,7 +112,7 @@ const CHAINS = [
+@@ -21,6 +21,8 @@
+ // with the combined deliverable. Live: the server does it (serve.mjs runTeam, one Claude process per
+ // desk); this page reads `task.team` off /api/tasks. Demo: the same theatre on a timer.
+ import { DEPTS, AGENTS, DEPT_KEYS } from './data.js';
++import { OFFICE, bossKey } from './office.js';
++const ORG = !!(OFFICE && OFFICE.org); // YOUR DEPARTMENTS: a department takes work as a whole team, and the Boss can pick the department
+ import { P, rnd, ri } from './v1data.js';
+ import { applyTasks, PROFILE, titleCase } from './profile.js';
+ import { parseWhen, describe, nextRun, fromPicker, untilText } from './when.js';
+@@ -112,7 +114,7 @@ const CHAINS = [
  ];
  
  applyTasks({ POOL, KEYS, CHAINS, SEGMENTS, AGENTS }); // INDUSTRY PROFILE (12 Sep 2026): per-industry demo file; no-op otherwise
@@ -740,8 +1074,19 @@ index 3fdfd74..9cd7777 100644
  function vars() { return { co: rnd(P.co), n: ri(6, 40), segment: rnd(SEGMENTS) }; }
  function timeStr(ts) {
    return new Date(ts).toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit' }).toLowerCase();
-@@ -344,7 +344,7 @@ export function initTasks(ctx) {
-   function resetTeam() { teamOn = false; P_.team.classList.remove('on'); }
+@@ -336,15 +338,16 @@ export function initTasks(ctx) {
+   [P_.cad, P_.at, P_.okc].forEach(el => el.addEventListener('keydown', e => e.stopPropagation()));
+   const routineIntent = text => repeat ? { when: fromPicker(P_.cad.value, P_.at.value), text, picker: true } : parseWhen(text);
+   // V3.2 (16 Sep) Agent Teams: the TEAM toggle — the department lead splits the task across its desks, they work at once, the lead writes the final
+-  let teamOn = false, teamsCfg = { enabled: true, max: 4 };
++  let teamOn = ORG, teamsCfg = { enabled: true, max: ORG ? 6 : 4 };
+   const teamIntent = text => /\b(as a team|team up|team this|get the (whole )?team|the (whole )?team (on|to|should|can)|with the team|(spawn|use|get) (\d+|two|three|four|five|a few|some) teammates?|\d+ teammates|split (it|this|the work) (up|across|between)|teammates|team:|whole department)\b/i.test(text);
+   const asTeam = text => teamsCfg.enabled && (teamOn || teamIntent(text));
+   const leadOf = k => AGENTS.find(x => x.dept === k && x.lead) || AGENTS.filter(x => x.dept === k)[0];
+   P_.team.addEventListener('click', () => { teamOn = !teamOn; P_.team.classList.toggle('on', teamOn); updateHint(); if (teamOn) P_.input.focus(); });
+-  function resetTeam() { teamOn = false; P_.team.classList.remove('on'); }
++  function resetTeam() { teamOn = ORG; P_.team.classList.toggle('on', teamOn); } // in your org a department works as a team unless you switch TEAM off
++  if (ORG) P_.team.classList.add('on');
    const teamBit = t => t.team?.members?.length ? ` · <span class="tp-team-chip">TEAM ${t.team.members.length + 1}</span>` : t.piece ? ' · <span class="tp-team-chip">PIECE</span>' : '';
    const membersText = t => (t.team?.members || []).map(id => agentOf(id)?.name || id).join(', ');
 -  let dept = 'marketing', filter = 'all';
@@ -749,7 +1094,98 @@ index 3fdfd74..9cd7777 100644
    P_.menu.innerHTML = DEPT_KEYS.map(k => `<button data-k="${k}"><span class="dot" style="background:${DEPTS[k].chip}"></span>${DEPTS[k].name}</button>`).join('');
    P_.menu.querySelectorAll('button').forEach(b => b.addEventListener('click', () => { setDept(b.dataset.k); P_.menu.classList.remove('on'); P_.input.focus(); }));
    P_.dd.addEventListener('click', (e) => { e.stopPropagation(); P_.menu.classList.toggle('on'); });
-@@ -806,7 +806,7 @@ export function initTasks(ctx) {
+@@ -354,7 +357,7 @@ export function initTasks(ctx) {
+     P_.ddName.textContent = DEPTS[k].short;
+     P_.ddDot.style.background = DEPTS[k].chip;
+     B_.dept.textContent = DEPTS[k].name.toUpperCase(); B_.dot.style.background = DEPTS[k].chip;
+-    P_.input.placeholder = `Type a task for ${DEPTS[k].name.toLowerCase()}…`;
++    P_.input.placeholder = DEPTS[k].boss ? 'Type a task — the boss picks the department…' : `Type a task for ${DEPTS[k].name.toLowerCase()}${ORG && teamOn ? ' (the whole department)' : ''}…`;
+     updateHint();
+   }
+   // routing: keywords → the right agent in the chosen dept; fallback = the dept lead (or first agent)
+@@ -368,6 +371,21 @@ export function initTasks(ctx) {
+     }
+     return { agent: best, matched: bestN > 0 };
+   }
++  // the Boss, in a demo: the department whose work this sounds like (its 'about', sub-teams and people's words)
++  function bossPick(title) {
++    const words = s => String(s || '').toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 3);
++    const pools = DEPT_KEYS.filter(k => !DEPTS[k].boss).map(k => [k, new Set([...words(DEPTS[k].name), ...words(DEPTS[k].about), ...(DEPTS[k].teams || []).flatMap(words),
++      ...AGENTS.filter(a => a.dept === k).flatMap(a => [...(KEYS[a.id] || []), ...words(a.name), ...words(a.role), ...words(a.does)])])]);
++    const has = (pool, x) => pool.has(x) || (x.length > 4 && [...pool].some(w => w.length > 4 && (w.startsWith(x) || x.startsWith(w)))); // invoice ~ invoices
++    const asked = [...new Set(words(title))];
++    let best = null, bestS = 0;
++    for (const [k, pool] of pools) {
++      // a word only one department uses says more than one they all use
++      const s = asked.reduce((t, x) => has(pool, x) ? t + 1 / pools.filter(([, p]) => has(p, x)).length : t, 0);
++      if (s > bestS) { bestS = s; best = k; }
++    }
++    return best;
++  }
+   function updateHint() {
+     grow();
+     const text = P_.input.value.trim();
+@@ -420,20 +438,21 @@ export function initTasks(ctx) {
+     const rt = routineIntent(title);
+     if (rt) { await submitRoutine(rt, title); return; }
+     if (live) {
+-      const text = title, k = dept;
++      const text = title, k = dept, viaBoss = !!DEPTS[k].boss;
+       P_.input.value = ''; P_.input.disabled = true; P_.add.disabled = true;
+       const team = asTeam(text);
+-      say(team ? `Routing through Claude — <b>${leadOf(k).name}</b> is reading it for the team…` : `Routing through Claude — ${DEPTS[k].name.toLowerCase()} is reading it…`, 'busy');
++      say(viaBoss ? `<b>${leadOf(k).name}</b> is deciding which department owns this…` : team ? `Routing through Claude — <b>${leadOf(k).name}</b> is reading it for the team…` : `Routing through Claude — ${DEPTS[k].name.toLowerCase()} is reading it…`, 'busy');
+       try {
+         const mdl = chosenModel();
+-        const r = await fetch(API + '/tasks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ dept: k, text, model: mdl || undefined, effort: effortSend(), team: team || undefined }) });
++        const r = await fetch(API + '/tasks', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ dept: k, text, model: mdl || undefined, effort: effortSend(), team: ORG ? !!team : (team || undefined) }) });
+         if (!r.ok) throw new Error((await r.json()).error || r.statusText);
+         const st = await r.json();
+         const t = mk({ agent: st.agent, title: st.title, text: st.text, plan: st.plan, why: st.why, by: 'you', live: true, sid: st.id, model: st.model, modelUsed: st.model || officeModel, modelFrom: st.model ? 'task' : 'office', effort: st.effort,
+           team: st.team ? { lead: st.team.lead, members: [] } : undefined });
+         resetModel(); resetTeam();
+         touch(t, 'added'); spawnEmote(R[t.agent], st.team ? '⚑' : '📋');
+-        say(st.team ? `Added — <b>${agentOf(t.agent).name}</b> has it and is splitting it across the team` : `Added — <b>${agentOf(t.agent).name}</b> has it${st.why ? ' · ' + esc(st.why) : ''}`);
++        const via = st.routedBy ? `<b>${esc(st.routedBy.name)}</b> passed it to <b>${esc(DEPTS[st.dept]?.name || st.dept)}</b>${st.routedBy.why ? ' (' + esc(st.routedBy.why) + ')' : ''}. ` : '';
++        say(via + (st.team ? `<b>${agentOf(t.agent).name}</b> has it and is splitting it across the team` : `Added — <b>${agentOf(t.agent).name}</b> has it${st.why ? ' · ' + esc(st.why) : ''}`));
+         setTimeout(() => { if (!P_.input.value) P_.hint.classList.remove('on'); }, 7000);
+       } catch (e) {
+         say(`Claude couldn't take it (${esc(e.message)}). Kept it on the board.`, 'err');
+@@ -442,25 +461,28 @@ export function initTasks(ctx) {
+       P_.input.disabled = false; P_.add.disabled = false; P_.input.blur(); // hand the keys back to the office
+       return;
+     }
++    let k0 = dept, via = '';
++    if (DEPTS[dept].boss) { const p = bossPick(title); if (p) { via = `<b>${leadOf(dept).name}</b> passed it to <b>${DEPTS[p].name}</b>. `; k0 = p; feedPush(R[leadOf(dept).id], '➜', `Passed to ${DEPTS[p].name}: ${title}`); spawnEmote(R[leadOf(dept).id], '➜'); } }
+     if (asTeam(title)) { // demo: the lead + two or three desks, all at once, the lead finishes when the pieces are in
+-      const t = addTeamDemo(dept, title);
++      const t = addTeamDemo(k0, title);
+       const mdl = chosenModel(); t.modelUsed = mdl || officeModel; t.modelFrom = mdl ? 'task' : 'office'; const ef = effortUsedFor(t.modelUsed); t.effortUsed = ef.effort || ''; t.effortFrom = ef.from;
+       resetModel(); resetTeam(); P_.input.value = ''; updateHint();
+-      say(`Added — <b>${agentOf(t.agent).name}</b> has it with ${esc(membersText(t))}.`); setTimeout(updateHint, 3200); P_.input.blur();
++      say(`${via}<b>${agentOf(t.agent).name}</b> has it with ${esc(membersText(t))}.`); setTimeout(updateHint, 3200); P_.input.blur();
+       return;
+     }
+-    const { agent: a } = route(dept, title);
++    const { agent: a } = route(k0, title);
+     const t = addTask(a.id, title, 'you');
+     if (t) { const mdl = chosenModel(); t.modelUsed = mdl || officeModel; t.modelFrom = mdl ? 'task' : 'office'; const ef = effortUsedFor(t.modelUsed); t.effortUsed = ef.effort || ''; t.effortFrom = ef.from; }
+     resetModel();
+     P_.input.value = ''; updateHint();
+-    if (t) { say(`Added — <b>${a.name}</b> has it.`); setTimeout(updateHint, 2600); P_.input.blur(); }
++    if (t) { say(`${via}Added — <b>${a.name}</b> has it.`); setTimeout(updateHint, 2600); P_.input.blur(); }
+     else say(`<b>${a.name}</b> already has five queued — let one finish first.`);
+   }
+   /* ---------- V3.2 (16 Sep) demo teams: the same moves on a timer ---------- */
+   function addTeamDemo(k, title) {
+     const L = leadOf(k), others = AGENTS.filter(x => x.dept === k && !x.lead).sort(() => Math.random() - 0.5);
+-    const picks = others.slice(0, Math.max(2, Math.min(3, teamsCfg.max - 1, others.length)));
++    let picks = others.slice(0, Math.max(2, Math.min(3, teamsCfg.max - 1, others.length)));
++    if (ORG) { const byTeam = new Map(); for (const p of others) if (!byTeam.has(p.team)) byTeam.set(p.team, p); picks = [...byTeam.values()].slice(0, Math.max(1, teamsCfg.max - 1)); } // one desk from each sub-team
+     const t = mk({ agent: L.id, title, by: 'you', team: { lead: L.id, members: picks.map(p => p.id) }, teamHold: true });
+     touch(t, 'added'); spawnEmote(R[L.id], '⚑'); feedPush(R[L.id], '⚑', `Team task: ${title} — ${picks.map(p => agentOf(p.id).name).join(', ')}`);
+     for (const p of picks) {
+@@ -806,7 +828,7 @@ export function initTasks(ctx) {
        if (t) m.innerHTML = metaFor(t);
      });
    }
@@ -758,3 +1194,30 @@ index 3fdfd74..9cd7777 100644
    render(true);
  
    /* ---------- the company board (B) ---------- */
+diff --git a/teams.mjs b/teams.mjs
+index 5c79190..ab1a283 100644
+--- a/teams.mjs
++++ b/teams.mjs
+@@ -21,7 +21,7 @@ export const DEFAULTS = { enabled: true, max: 4 };
+ export function settings(cfg) {
+   const t = { ...DEFAULTS, ...((cfg && cfg.teams) || {}) };
+   t.enabled = t.enabled !== false;
+-  t.max = Math.min(6, Math.max(2, parseInt(t.max, 10) || DEFAULTS.max));
++  t.max = Math.min(8, Math.max(2, parseInt(t.max, 10) || DEFAULTS.max)); // up to 8: a department with several sub-teams
+   return t;
+ }
+ 
+@@ -39,11 +39,12 @@ export function planPrompt({ business, deptName, lead, seats, text, title, max,
+   const system = `You are ${lead.name}, the lead of the ${deptName} department of ${business}. You are splitting one request across your team. ` +
+     'Return ONLY a JSON object — no prose, no code fences.';
+   const user = `Your team (id · name · role · what they do${seats.some(s => s.skills?.length) ? ' · skills' : ''}):\n` +
+-    seats.map(s => `- ${s.id}${s.lead ? ' (you, the lead)' : ''} · ${s.name} · ${s.role} · ${s.does}${s.skills?.length ? ' · skills: ' + s.skills.join(', ') : ''}`).join('\n') +
++    seats.map(s => `- ${s.id}${s.lead ? ' (you, the lead)' : ''}${s.team ? ' · sub-team ' + s.team : ''} · ${s.name} · ${s.role} · ${s.does}${s.skills?.length ? ' · skills: ' + s.skills.join(', ') : ''}`).join('\n') +
+     `\n\nThe owner's request: "${text}"${title && title !== text ? `\n(Task title: ${title})` : ''}\n\n` +
+     (notes ? `Company notes you may use to split it well:\n${notes}\n\n` : '') +
+     `The owner asked for a TEAM, so split the request into 2 to ${max} INDEPENDENT pieces that can be done at the same time, each owned by a different desk whose job or skills fit it — never one piece. ` +
+     'When the request is one job in parts (three angles, three emails, three sections), give each part to a different desk with the whole brief so the parts stay distinct; when it is one indivisible thing, give the making to one desk and a different lens to another (a check against the brand voice, the customer\'s view, the numbers, the risks). ' +
++    (seats.some(s => s.team) ? 'Your department is made of sub-teams: give each piece to the sub-team whose kind of work it is (code to software, documents to documentation, and so on), and to the desk in it that fits best. ' : '') +
+     'You may take one piece yourself. Do not invent work the owner did not ask for. Each piece\'s text is a complete instruction the teammate can act on alone, with what the owner said that matters to it.\n' +
+     'Return: {"pieces":[{"agent":"<id>","title":"<imperative title, max 70 characters>","text":"<the instruction>"}],"why":"<one short sentence on how you split it>"}';
+   return { system, user };
