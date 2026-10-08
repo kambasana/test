@@ -21,8 +21,15 @@ export function adapterInfo() {
 
 /** Environment for the adapter: the host's, minus anything that would make the child think it is
  *  nested inside another Claude Code, with claude.ai connectors switched off. */
-export function adapterEnv(base = process.env) {
-  const env = { ...base };
+// Only what the agent process needs reaches it: never the office's own secrets or tokens.
+// Extra names can be allowed with settings.agentEnv (an array) or EO_AGENT_ENV (comma-separated).
+const ENV_ALLOW = new Set(['PATH', 'HOME', 'USER', 'LOGNAME', 'SHELL', 'TMPDIR', 'TEMP', 'TMP', 'LANG', 'TERM', 'TZ',
+  'HTTPS_PROXY', 'HTTP_PROXY', 'NO_PROXY', 'https_proxy', 'http_proxy', 'no_proxy', 'NODE_EXTRA_CA_CERTS', 'SSL_CERT_FILE', 'SSL_CERT_DIR',
+  'XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME', 'SYSTEMROOT', 'APPDATA', 'LOCALAPPDATA', 'USERPROFILE']);
+const ENV_PREFIX = /^(LC_|ANTHROPIC_|CLAUDE_)/; // locale, and Claude's own login and settings
+export function adapterEnv(base = process.env, extra = String(process.env.EO_AGENT_ENV || '').split(',')) {
+  const allow = new Set([...ENV_ALLOW, ...extra.map(s => s.trim()).filter(Boolean)]);
+  const env = Object.fromEntries(Object.entries(base).filter(([k]) => allow.has(k) || ENV_PREFIX.test(k)));
   delete env.CLAUDECODE;
   delete env.CLAUDE_CODE_ENTRYPOINT;
   delete env.CLAUDE_CODE_SSE_PORT;

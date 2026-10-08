@@ -1,6 +1,6 @@
 # Base platform: Elenta Office on Buzz (with a Paperclip comparison)
 
-Status: design proposal, 2026-10-07. Nothing in `server/` or `web/` has been changed.
+Status: design proposal, 2026-10-07; decision added 2026-10-08 (§13). Nothing in `server/` or `web/` has been changed.
 
 Sources: Block's Buzz (Apache-2.0) at `/home/user/buzz`, commit `1972b7d`; relay image
 `ghcr.io/block/buzz:main` at digest `sha256:96f43f552ff6d5c71333a4c686d9d01873747206f1382d6fb17f7ad1648df2a5`,
@@ -32,6 +32,8 @@ running relay in this environment. A claim marked **(code)** was read in the sou
   - Add the Buzz relay as an optional system of record behind a flag, in phases (§9).
   - Keep "our own" as the default until phase 3 passes.
   - The Paperclip evaluation could not be done in this session (§11), so it stays open.
+    **Update 2026-10-08:** done in §13. The decision there is Option 1 (Buzz relay plus our own
+    control plane, with Paperclip-style elements rebuilt or ported).
 
 ---
 
@@ -540,6 +542,8 @@ were copied.
 
 ## 11. Paperclip vs Buzz vs keep our own
 
+**Superseded by §13 (2026-10-08), which answers every question in the table below.** Original text follows.
+
 **Paperclip could not be evaluated in this session.** The shallow clone of
 `github.com/paperclipai/paperclip` was refused by the session's permission classifier ("untrusted
 code integration"). The GitHub API connector here only reaches `kambasana/test`. Neither block was
@@ -613,3 +617,375 @@ The Paperclip column below therefore contains **only the questions to answer**, 
 5. Does an unconfigured GIF proxy or the `BUZZ_GIT_CONFORMANCE_PROBE` make outbound or S3 calls at
    start? Block egress regardless, and check the logs.
 6. Paperclip go/no-go (§11).
+
+---
+
+## 13. Decision: Option 1 vs Option 2
+
+Date: 2026-10-08. The user approved downloading and running Paperclip for this evaluation.
+
+The two options:
+
+- **Option 1:** keep our control plane and runner, use the Buzz relay as the system of record,
+  and add Paperclip-style elements ourselves (rebuilt, or ported MIT code).
+- **Option 2:** use Paperclip as the control plane, run our agents through an external Paperclip
+  adapter, and integrate Buzz into Paperclip.
+
+Sources:
+
+- **Paperclip** (MIT), shallow clone at `/home/user/paperclip`, commit `2f0c485` (2026-10-08,
+  "fix(skills): … (#15554)"), server version 0.3.1. Paths in this section are relative to that
+  clone unless prefixed `elenta:`.
+- **Buzz:** as in §1–§12.
+
+Marks: **(ran)** means observed in this environment; **(code)** means read in the source only.
+
+### 13.1 What was run
+
+| Step | Result |
+|---|---|
+| `git clone --depth 1` into `/home/user/paperclip` | OK: 9,038 files. About 506k lines of non-test server TypeScript and 2,323 test files. |
+| Node | Paperclip requires Node ≥ 24.11 (`package.json` `engines`; v2026.831.0 notes: "Breaking: Node.js 24.11.0 or newer is required"). This host has 22.22. Node 24.21.0 was downloaded from nodejs.org, SHA-256 checked, into `/home/user/node24` (not on PATH globally). |
+| `pnpm install` (pnpm 9.15.4 via corepack, `PAPERCLIP_TELEMETRY_DISABLED=1 DO_NOT_TRACK=1`) | OK in 2 min 16 s. 2.7 GB `node_modules`. Warnings only (bins for not-yet-built packages). Postinstall scripts ran, including `opencode-ai` and node-gyp. |
+| `pnpm dev:once`, attempt 1 | **Failed.** Embedded Postgres init refused because we run as root and it switches to the `postgres` user, which could not write `$PAPERCLIP_HOME`. Fixed with `chown postgres` on the data home. |
+| `pnpm dev:once`, attempt 2 (`HOST=127.0.0.1 PAPERCLIP_HOME=/home/user/paperclip-home PAPERCLIP_ANNOUNCEMENTS_ENABLED=false`, telemetry off) | OK after about 11 min. It applied 317 migrations, then built the Rust "native runner" (`packages/paperclip-runner`) in 9 min 34 s, then started. A restart takes seconds. |
+| Listening sockets (from `/proc/net/tcp`) | All loopback: `127.0.0.1:3100` (API+UI), `127.0.0.1:13100` (Vite HMR), `127.0.0.1:54329` (embedded Postgres). Mode `local_trusted`. **(ran)** |
+| Outbound connections | A snapshot of the server's sockets showed no non-loopback peer. Telemetry is off at init: `server/src/telemetry.ts:12-16` returns no client when `resolveTelemetryConfig` says disabled (`packages/shared/src/telemetry/config.ts:71-79`). This is not a full egress capture. |
+| `dev:stop` | Stopped the runner but **left the server process orphaned**. It needed a SIGTERM by pid. |
+| Time spent | About 30 min wall clock to a running server, including the root/Postgres fix and the Rust build. |
+
+### 13.2 Paperclip, as it stands (code-level findings)
+
+**Adapters and launchers**
+
+- **Built-in types (16):** `acpx_local, claude_local, codex_local, paperclip_runner, cursor_cloud,
+  cursor, gemini_local, grok_local, hermes_gateway, hermes_local, kimi_local, openclaw_gateway,
+  opencode_local, pi_local, process, http` (`server/src/adapters/builtin-adapter-types.ts:4-21`).
+  They are registered at module load (`server/src/adapters/registry.ts:879-902`).
+- **`claude_local`:**
+  - `dangerouslySkipPermissions` **defaults to true** (`packages/adapters/claude-local/src/server/execute.ts:440`;
+    ACP path `…/acp.ts:664`), which becomes `--dangerously-skip-permissions`
+    (`…/permissions.ts:12`).
+  - The child env is `{...process.env, ...env}` (`execute.ts:486-490`), so the agent gets the
+    whole server environment plus `PAPERCLIP_*` variables and, when a JWT secret exists, a
+    run-scoped API key.
+  - Agents are expected to drive Paperclip themselves over REST: checkout, comments, sub-tasks,
+    hires (`docs/guides/agent-developer/heartbeat-protocol.md`). That requires a shell or a
+    network tool.
+- **`process`:** runs an arbitrary command (`docs/adapters/process.md`;
+  `server/src/adapters/process/execute.ts:98`). It is **the default adapter type** for a new agent
+  row (`packages/db/src/schema/agents.ts:30`). It is also the fallback for unknown types
+  (`registry.ts:1022-1024`: `findActiveServerAdapter(type) ?? processAdapter`). `process` and
+  `http` cannot be unregistered (`registry.ts:999`).
+- **External adapters:**
+  - Each one is an npm or local package exporting `createServerAdapter()`.
+  - Install with `POST /api/adapters/install {packageName, isLocalPath}`
+    (`server/src/routes/adapters.ts:307`). `docs/adapters/external-adapters.md` says
+    `POST /api/adapters`, which returns 404 **(ran)**. For a local path, `packageName` must be the
+    path.
+  - The registry is `$PAPERCLIP_HOME/adapter-plugins.json` (`server/src/services/adapter-plugin-store.ts:50`).
+  - The module is **`import()`ed into the server process** (`server/src/adapters/plugin-loader.ts:181-203`),
+    so adapter code runs with the server's privileges.
+  - An external adapter **may take a built-in type** and override it (`registry.ts:953-975`,
+    `988-996`). The comment "External plugins must not replace these" (`builtin-adapter-types.ts:2`)
+    is not enforced **(ran)**.
+- **"Disabled" adapters** are only hidden from creation (`registry.ts:1102-1112`;
+  `adapter-plugin-store.ts:34-35` "hidden from menus but still functional") **(ran, §13.3)**.
+- **Native runtime (`paperclip_runner`):** used only when the agent's type is
+  `paperclip_runner` and an experimental flag is on (`server/src/services/native-runtime/runtime-mode.ts:107-145`).
+  Otherwise the heartbeat calls `adapter.execute()` (`server/src/services/heartbeat.ts:23983`, `25461`).
+- **Other process launchers outside adapters:**
+  - Conference Room Chat spawns `claude -p … --dangerously-skip-permissions` with the full server
+    env (`server/src/routes/board-chat.ts:226-257`). It is gated by the experimental flag
+    `enableConferenceRoomChat` and `local_trusted` (`board-chat.ts:98-120`).
+  - Workspace runtime services run `shell -lc <command>` (`server/src/services/workspace-runtime.ts:6433`).
+  - The tool gateway spawns stdio MCP servers (`server/src/services/tool-gateway.ts:5058`).
+  - Plugin workers are spawned by `server/src/services/plugin-worker-manager.ts`.
+- **Optional sandbox:** bubblewrap-based local containment exists
+  (`packages/adapter-utils/src/local-process-sandbox.ts:347-490`, Linux only). It is not the
+  default, and `bwrap` is not installed here.
+
+**Heartbeats and wakeups**
+
+- Wake requests are rows in `agent_wakeup_requests` (`source`, `reason`, `status`,
+  `coalescedCount`; `packages/db/src/schema/agent_wakeup_requests.ts:25-30`). Duplicate wakes
+  coalesce (`heartbeat.ts:16098-16111`).
+- Assignment wakes the assignee **(ran)**. Scheduled heartbeats are per agent
+  (`runtimeConfig.heartbeat`, off by default for a new agent, **(ran)** from the create response).
+- Routines (cron, webhook, API): `server/src/services/routines.ts` (3,390 lines) and a
+  self-contained cron parser `server/src/services/cron.ts` (373 lines, no imports).
+- `heartbeat.ts` alone is **31,096 lines**.
+
+**Tickets, blockers, atomic checkout**
+
+- Issues have a parent (sub-issues), status, priority, assignee (agent or user), `checkoutRunId`
+  and `executionRunId` (`packages/db/src/schema/issues.ts:40-72`). Blockers are
+  `issue_relations` with `type: "blocks"` (`issue_relations.ts:13`).
+- Checkout is one conditional `UPDATE … WHERE status IN (expected) AND (assignee IS NULL OR same
+  run) AND execution_run_id IS NULL` (`server/src/services/issues.ts:11751-11775`). A second
+  claimant gets 409 **(ran)**. The heartbeat checks out the issue for the run before `execute()`
+  **(ran)**.
+- Creating an issue identical to an open one returns the existing issue (idempotency) **(ran)**.
+
+**Budgets**
+
+- Policies have company, agent or project scope, a metric (`billed_cents`), a window (calendar
+  month UTC), `warnPercent` 80, `hardStopEnabled`, and `unpricedUsagePolicy: block`
+  (`packages/db/src/schema/budget_policies.ts:10-22`).
+- Threshold check: `budgets.ts:79-83`. Pre-invocation block: `heartbeat.ts:17744-17753`. Pausing a
+  scope cancels its running work (`heartbeat.ts:30569-30578`).
+- Spend is recorded from the adapter's reported `costUsd` / `billingType`
+  (`server/src/services/run-cost-accounting.ts:85-87`). `subscription_included` books zero.
+  Reservations exist, but `reservationCents` defaults to 0.
+
+**Approvals and board controls**
+
+- Approval types: `hire_agent`, `approve_ceo_strategy`, `budget_override_required`,
+  `request_board_approval` (`packages/shared/src/constants.ts:689-694`).
+- Per-issue review and approval stages are set through the execution policy
+  (`docs/guides/execution-policy.md`; `server/src/services/issue-execution-policy.ts`, 1,226 lines).
+- Board controls: pause, resume, terminate (`server/src/routes/agents.ts:5863`, `5889`, `6010`;
+  `server/src/services/agents.ts:1011-1070`).
+
+**Tool gateway** (Allowed / Ask first / Off)
+
+- This governs **MCP connections only**: applications, connections, catalog with risk classes,
+  profiles and bindings, and policies `allow`, `block`, `require_approval`, `rate_limit`,
+  `trust_rule`, with "deny beats allow" (`doc/MCP-ACCESS-GOVERNANCE.md` "Mental model").
+- Profiles choose which catalog entries an actor *sees*, so "Off" hides the tool.
+- It does not govern an adapter's built-in tools: Claude Code's Bash is controlled only by the
+  adapter's own flags.
+- Size: `tool-access.ts` 21,069 lines plus `tool-gateway.ts` 11,315 lines.
+
+**Secrets**
+
+- Local provider: AES-256-GCM (`server/src/secrets/local-encrypted-provider.ts:205-220`) with a
+  master key file written 0600 (`…:76`) or `PAPERCLIP_SECRETS_MASTER_KEY(_FILE)` (`…:22,49`).
+- AWS Secrets Manager provider; per-agent secret bindings (`company_secret_bindings`).
+- v2026.916.0 notes: agent APIs *used to* return plaintext `adapterConfig.env` credentials.
+
+**Auth modes**
+
+- `local_trusted` vs `authenticated` (private or public), with bind loopback, lan, tailnet or
+  custom (`doc/DEPLOYMENT-MODES.md` §2–3).
+- **In `local_trusted`, every request without a bearer token is the instance-admin board**
+  (`server/src/middleware/auth.ts:229-238`). Any local process can approve, pause or install
+  adapters. A plain `curl` approved a gated ticket **(ran)**.
+- Agent JWTs need `PAPERCLIP_AGENT_JWT_SECRET` or `BETTER_AUTH_SECRET`
+  (`server/src/agent-auth-jwt.ts:40`). Without one, runs go ahead with no agent identity and
+  write-backs are attributed to `local-board` **(ran)**.
+
+**Telemetry and outbound calls**
+
+- Telemetry is **on by default**. It is off with `PAPERCLIP_TELEMETRY_DISABLED=1`,
+  `DO_NOT_TRACK=1`, `CI=true`, or `telemetry.enabled:false` (`packages/shared/src/telemetry/config.ts:71-79`;
+  README "Telemetry"). Endpoint: `https://telemetry.paperclip.ing/ingest`.
+- **A second default-on call:** the announcements feed
+  `https://pages.paperclip.ing/announcements/v1/current.json`, off with
+  `PAPERCLIP_ANNOUNCEMENTS_ENABLED=false` (`server/src/config.ts:367-368`).
+- Feedback-trace sharing posts to `telemetry.paperclip.ing/feedback-traces` only when a company
+  opts in (`server/src/services/feedback-share-client.ts:5-23`; company default
+  `feedbackDataSharingEnabled:false` **(ran)**).
+- Sentry and OTel only when a DSN or endpoint is set (README "Observability").
+- Plugin installs need npm registry access (plugin-sdk README "Current deployment caveats").
+
+**DB, API, plugins**
+
+- Postgres (embedded by default, `embedded-postgres` 18.1 beta) with **158 schema files and 318
+  migrations** (`packages/db/src/schema`, `packages/db/src/migrations`).
+- REST: 87 route files and **962 `router.<verb>(` registrations** (`server/src/routes/*.ts`), plus
+  an OpenAPI route.
+- Plugins (`@paperclipai/plugin-sdk`): worker plus UI. "Plugin workers and plugin UI should both
+  be treated as trusted code today." UI bundles run same-origin with the board session
+  (`packages/plugins/sdk/README.md`).
+
+**Licence**
+
+- Root MIT, "Copyright (c) 2025 Paperclip AI" (`LICENSE`).
+- 40 of 46 `package.json` files declare MIT. The other 6 are private examples or fixtures with no
+  licence field: root, three plugin examples, `paperclip-plugin-fake-sandbox`, and the
+  cloudflare bridge template.
+- Other notices, all MIT:
+  - `packages/adapters/hermes/LICENSE` (Nous Research);
+  - `packages/shared/src/cliplab/LICENSE` (Jérémy Perret, plus `PROVENANCE.md`);
+  - `skills/complain` and `skills/suggestion-box` (Denver Technologies);
+  - `ui/public/brands/adapters/LICENSE` (LobeHub icons; the vendor logos remain trademarks).
+- Fonts: `ui/public/fonts/NOTICE.md` (Inter).
+
+**Upstream pace**
+
+- 31 release notes in `releases/`.
+- The six most recent releases with a "Breaking Changes" section (v2026.817.0 → v2026.1005.0)
+  include a Node floor bump, removed company fields with a dropping migration, changed credential
+  handling, and changed default network exposure for managed runtimes.
+- PR numbers went from about #11184 (v2026.817.0) to #15554 (today), roughly 4,400 PRs in 7 weeks.
+
+### 13.3 Go/no-go prototype: Elenta's runner as a Paperclip adapter
+
+Code: `elenta:experiments/paperclip-acp-adapter/`.
+
+- `index.mjs` is the adapter `elenta_acp`. It **imports** `elenta:server/runner.mjs` `runSession()`,
+  `server/acp.mjs` and `server/audit.mjs` unchanged; nothing in `server/` was edited.
+- `runSession()` supplies the restrictions:
+  - `terminal:false` and `mcpServers:[]`;
+  - `_meta.claudeCode.options` with `tools [Read, Write, Edit]`, `allowedTools []`,
+    `disallowedTools` = `ALWAYS_DISALLOWED` (Bash, Glob, Grep, WebFetch, Task, …), and
+    `settingSources []`;
+  - `decidePermission()` for every permission request;
+  - `containedPath()` for `fs/*`.
+- Per wake, the adapter:
+  1. checks out the ticket (or accepts the heartbeat's checkout for this run);
+  2. writes `ticket.md` into `work/<issue>/<run>/`;
+  3. runs one ACP session;
+  4. writes the result back with `PATCH /api/issues/:id {status:"done", comment}` using the run's
+     agent JWT.
+- Cost comes from ACP `usage_update.cost.amount`. It is captured with a prototype setter on
+  `AcpConnection`, because `runner.mjs` ignores that update.
+- `deny-builtin/` is an external adapter that takes the built-in type `process` and refuses to run.
+
+Runs used `@agentclientprotocol/claude-agent-acp` 0.87.0 with the Claude login on this host.
+
+| Check | Result | Evidence |
+|---|---|---|
+| A ticket assigned in Paperclip runs through the adapter and gets done | **PASS** | ELE-2, ELE-4, ELE-9, ELE-10, ELE-13 → `done`. Each has `out/result.md` (e.g. ELE-2: three desk tips). |
+| The result is written back to Paperclip | **PASS** | Each ticket has a comment with the file content and an evidence footer. With the JWT secret set, `authorType=agent` and the author is the Writer agent (ELE-4). Before that it was `local-board`, with `derivedAuthorAgentId` taken from the run id. |
+| No Bash tool in the session | **PASS** | `system/init` tool list per run (audit `session.tools`): `Edit, Read, Write`; MCP servers: none; `permissionMode: default`. ELE-3 asked the agent to run `id`; its answer: "NOT POSSIBLE. I have no shell tool". `runner.mjs` would also have stopped the run on any extra tool. |
+| A write outside the workspace is refused | **PASS** | ELE-3 audit: `Refused Write: /tmp/elenta-escape-check.txt (… outside the job workspace) rule=a` and `Refused Write: …/work/<issue>/escape-up.txt (… outside …) rule=a`. Neither file exists afterwards. The only allowed write was `out/result.md` (rule b). |
+| Spend is recorded in Paperclip | **PASS** | `cost.reported` activity per run, e.g. $0.0175 (ELE-2) and $0.0089 (ELE-4). The company summary shows 11 cost events. |
+| Paperclip's own launchers can be kept from bypassing the adapter | **PASS, but only with extra work** | See below. |
+| Agent env holds no server secrets | **FAIL (finding in our code)** | `/proc/<acp pid>/environ` of the ACP child contained `PAPERCLIP_AGENT_JWT_SECRET`, `PAPERCLIP_SECRETS_MASTER_KEY_FILE` and every token in the server env. Cause: `elenta:server/acp.mjs` `adapterEnv()` copies `process.env`. The agent has no tool that can read its env (no shell; Read limited to the workspace by rule a). Still, this is a defence-in-depth gap under **either** option. |
+
+How the launcher check went:
+
+1. `PATCH /api/adapters/<type> {disabled:true}` for `process, http, claude_local, codex_local,
+   acpx_local, gemini_local, opencode_local`.
+2. After that, creating an agent of a disabled type, PATCHing an agent to one, or creating an
+   agent with no type (default `process`) are all refused with 4xx "Adapter … is not available".
+3. **But an existing `process` agent still ran** while `process` was disabled. ELE-6 ran
+   `/usr/bin/touch` as root and the run `succeeded`.
+4. Installing `deny-builtin/process` (an external adapter with type `process`) made the next run
+   fail with "switched off (Elenta deny stub)" and nothing executed (ELE-7, ELE-8).
+5. So a full lockdown needs:
+   - one deny stub per built-in type (16);
+   - a startup check that every agent's `adapterType` is `elenta_acp`;
+   - Conference Room Chat left off;
+   - no workspace runtime services;
+   - no stdio MCP;
+   - `authenticated` mode, so that a local process is not the board. The board can also re-enable
+     a built-in with `PATCH /api/adapters/:type/override {paused:true}` (`routes/adapters.ts:492`).
+
+**Verdict: technically GO.** Paperclip can run every agent through our runner and policy. But it
+is GO only with a lockdown layer that has to be kept up against an upstream that changes daily.
+
+### 13.4 Budgets and approvals in practice (test 4)
+
+- **Budget hard stop: works, with a one-run overshoot.**
+  1. Agent "Budgeted", monthly budget 1¢.
+  2. Run 1 (ELE-9) cost 0.87¢ and finished. Run 2 (ELE-10) started (still under) and finished at
+     1.73¢.
+  3. The agent was then auto-paused (`status=paused`, `pauseReason=budget`; budget overview
+     `status: hard_stop`, utilization 173%). A pending `budget_override_required` approval was
+     created.
+  4. Run 3 (ELE-11) never started (no workspace was created) and the ticket went to `blocked`.
+  5. The overshoot happens because cost is known only at the end of a run and the default
+     reservation is 0.
+- **Approval stage: works.**
+  1. ELE-12 had an execution policy with one `approval` stage (participant: board user).
+  2. The agent's `PATCH status:done` was turned into `in_review`, reassigned to the board
+     (`executionState.status: pending`, `currentStageType: approval`).
+  3. Only the board's `PATCH status:done` with a comment moved it to `done`
+     (`lastDecisionOutcome: approved`).
+  4. In `local_trusted`, that board call was an **unauthenticated curl from loopback**.
+
+### 13.5 Scored comparison
+
+Scores are 1 (poor) to 5 (good); weights are in brackets.
+
+| Criterion | Option 1: Buzz relay + our control plane, Paperclip elements ported or rebuilt | Option 2: Paperclip control plane + our adapter + Buzz integrated |
+|---|---|---|
+| **Security / agent containment** [3] | **4**. Our runner is the only launcher, with nothing to lock down. Buzz agent tooling is not used (§8.3). Relay content is plaintext (§8.5). Env allowlist still to add. | **2**. Containment of *our* agents is proven (§13.3), but the defaults are the opposite of ours: skip-permissions on by default, full server env to agents, "disabled" ≠ off, unknown type → `process`, `local_trusted` = any local process is admin, adapters and plugins run in-process. 962 routes and many spawners to keep off. |
+| **Maturity & test coverage** [2] | **3**. The relay is solid for messaging (6,871 Rust tests; our probes passed), but pre-1.0 with approvals and job kinds unfinished. The Paperclip-like features would be new code of ours. | **4**. Large and heavily tested (2,323 test files). Budgets, checkout and approval stages behaved as documented in our runs. Downsides: docs drift (`/api/adapters`), `dev:stop` orphaned the server, and the root/Postgres setup snag. |
+| **Fit to our model** (Boss → departments → sub-teams, whole-department jobs, approvals) [3] | **4**. Same model as SPEC: Boss routes, the lead plans, pieces with `after:`, the office combines, the owner approves. Buzz channels per department fit. | **3**. Org chart (`reportsTo`), sub-issues, `blocks` and approval stages map well. But Paperclip's agents self-drive over REST with a shell. Our no-shell agents cannot, so the adapter must turn structured output into sub-issues and hand-offs; planning and combining stay ours. |
+| **Effort to integrate** [2] | **2**. About 10–12 weeks for the phases below. Files: `server/{acp,runner,jobs,org,settings,http,audit}.mjs`, plus new `budget.mjs`, `scheduler.mjs`, `cron.mjs`, `controls.mjs`, `buzz.mjs`, `keys.mjs`; `web/` controls. | **3**. About 9–12 weeks: adapter hardening and env allowlist (1.5), 16 deny stubs plus a lockdown check plus `authenticated` mode (1.5), planner → sub-issue bridge (2–3), our 3D UI as a Paperclip API client (2–3), Buzz bridge plugin (2–3), upgrade regression harness (1, then ongoing). |
+| **What we must build ourselves** [1] | **2**. Tickets/blockers/checkout, scheduler, budgets, board controls, approval stages, later an MCP gateway, secrets, portability. | **3**. Lockdown, adapter, planner bridge, UI client, Buzz bridge. Budgets, approvals, tickets and routines come with it. |
+| **Operational footprint / attack surface** [2] | **3**. Our Node 22 server (about 3k lines) plus the Buzz stack (relay, Postgres, Redis, MinIO) on loopback and an internal network. | **1**. Paperclip (Node 24, embedded Postgres 18 beta, 2.7 GB deps, Rust runner build, 962 routes, plugin system with npm installs, chat connectors) **plus** the Buzz stack. Two Postgres instances. |
+| **Licence** [1] | **5**. Apache-2.0 relay over the protocol. MIT ports need only the notice kept. | **5**. MIT throughout (sub-notices all MIT). Vendor logos are trademarks. |
+| **Upstream risk** [2] | **4**. We depend on Buzz only at the wire level (NIP-01/29/42/98) and a digest-pinned image. Ported MIT files are frozen copies. | **1**. About 90 PRs a day, breaking changes in most recent releases, internals of 30k-line files. Our adapter depends on the `ServerAdapterModule` contract, REST shapes, the heartbeat checkout behaviour and auth semantics, all of which changed within the last two months. |
+| **How the other platform fits** [1] | **4**. Paperclip elements become small services in our server with Buzz events as their log (§13.7). | **2**. Buzz would be a trusted Paperclip plugin mirroring `issue.*` events to the relay with keys held by the plugin. Paperclip's DB stays the source of truth, so Buzz is only a second, signed copy. Two audit trails and two identity systems. |
+| **Weighted total** (max 85) | **59** | **45** |
+
+Totals: Option 1 = 4·3 + 3·2 + 4·3 + 2·2 + 2·1 + 3·2 + 5·1 + 4·2 + 4·1 = 59.
+Option 2 = 2·3 + 4·2 + 3·3 + 3·2 + 3·1 + 1·2 + 5·1 + 1·2 + 2·1 = 45.
+
+Option 2 does better on feature completeness and maturity, and the prototype shows it *can* be
+contained. It loses on what matters most for us: secure defaults, footprint and upstream churn.
+The gap is not narrow, so the evidence does not favour Option 2.
+
+### 13.6 Recommendation
+
+**Option 1.** Base on our control plane with the Buzz relay as the system of record (phased as in
+§9), and take Paperclip's *design* and selected small MIT files, not its runtime.
+
+- **Port verbatim:**
+  - `server/src/services/cron.ts` (373 lines, no imports; tests to port from
+    `ui/src/lib/cron-fires.test.ts`);
+  - the budget threshold logic (`server/src/services/budgets.ts:79-83`).
+- **Port as patterns (rebuild in our code):**
+  - conditional-update checkout (`issues.ts:11751-11775`);
+  - wake coalescing (`heartbeat.ts:16098-16111`);
+  - execution-policy stages (`issue-execution-policy.ts`, `docs/guides/execution-policy.md`);
+  - pre-invocation budget block plus cancel on pause (`heartbeat.ts:17744-17753`, `30569-30578`).
+- **Licence obligations for any copied file:** keep "Copyright (c) 2025 Paperclip AI" and the MIT
+  permission notice. Add a `// Derived from paperclipai/paperclip <path> @2f0c485 (MIT); changes: …`
+  header. Add the MIT text to `THIRD-PARTY-NOTICES` and a row in `CLEANROOM.md` naming each
+  copied file.
+- **Do not adopt:** Paperclip adapters, the heartbeat service, plugins, the tool gateway or
+  connectors.
+- **Keep** `experiments/paperclip-acp-adapter/` as a reference. If Paperclip is revisited, the
+  lockdown list in §13.3 is the entry criterion.
+
+### 13.7 Option 1 phased plan: Paperclip elements in our server
+
+Conventions for Buzz events are as in §6: all events carry `["h", <channel>]` and the `elenta`
+namespace tag. "Owner-signed" means signed by the office with the owner key (§5). State lives in
+our store and is rebuilt from the relay from phase 7. Every phase sits behind a flag and is
+mergeable on its own.
+
+| # | Element | Port or rebuild (Paperclip source, MIT) | Our store | Buzz event / tags | Tests |
+|---|---|---|---|---|---|
+| E1 | **Org chart / reporting lines** | Rebuild. Concept from `packages/db/src/schema/agents.ts:28` (`reportsTo`). Nothing copied. | `orgs/*.json`: each person gets `reportsTo`; the Boss is the single root; leads report to the Boss, sub-team members to their lead (`server/org.mjs`). | On apply: owner-signed kind 9 in `#office` `["elenta","org"]`, `["x",<sha256 of org file>]`, `["v",n]`. Per person: kind 0 with `["dept",k]`, `["team",t]`, `["reports_to",<pubkey>]`. | Cycle rejected; exactly one root; every lead reports to the Boss; the event's `x` equals the file hash; a person moved between departments gets 9001/9000 membership changes. |
+| E2 | **Tickets with blockers + atomic checkout** | Rebuild. Patterns: `issues.ts:11751-11775` (conditional claim), `issue_relations.ts:13` (`blocks`), status set from `docs/api/issues.md` "Issue Lifecycle". | `data/jobs.json`: pieces get `status` (todo / in_progress / in_review / blocked / done / cancelled), `after:[pieceId]` (SPEC §10.7) and `checkoutRun`. Claims are compare-and-set under the engine's single writer, with an atomic rename on write. | `["elenta","piece"]` gains repeated `["after",<pieceId>]`. Claim: kind 9 reply `["elenta","checkout"]`, `["piece",id]`, `["run",runId]`, signed as the person. Status change: `["elenta","status"]`, `["piece",id]`, `["to",s]`. | Two concurrent claims → exactly one wins; a piece with an unmet `after` never starts; a cycle in `after` is rejected at plan time; a blocked → todo transition only when all blockers are done; a restart mid-run releases stale claims. |
+| E3 | **Heartbeats / wakeup queue + routines** | **Port `server/src/services/cron.ts` verbatim** (`parseCron`, `validateCron`, `nextCronTick`; lines 204-329) as `server/cron.mjs`, with the MIT header. Rebuild the wake queue with coalescing semantics from `agent_wakeup_requests.ts:25-30` and `heartbeat.ts:16098-16111`. | `data/routines.json` (cron, department, request template, `lastFiredAt`, `paused`); in-memory wake queue keyed `(person, reason)` with a count; persisted `lastFiredAt`. | A routine firing creates a normal `job.created` root with an extra `["routine",id]`. No relay events for individual wakes (too chatty). | Port the cron cases from `ui/src/lib/cron-fires.test.ts`; duplicate wakes coalesce (count = n, one run); no double fire across a restart; a paused department's routine does not fire; a routine job still needs owner approval. |
+| E4 | **Budgets with hard stops** | Port the threshold function (`budgets.ts:79-83`). Rebuild the rest (SPEC §10.1–2). Patterns: pre-invocation block (`heartbeat.ts:17744-17753`), cancel on pause (`30569-30578`), `unpricedUsagePolicy:block` (`budget_policies.ts:18`). **Fix the overshoot we observed** with a per-run reservation (the expected cost of a step). | `data/costs.jsonl` (append-only; run, person, department, job, model, USD from ACP `usage_update.cost`, captured natively in `runner.mjs`, not via the prototype's setter); policies in `settings.json` per office, department and person. | Only on state changes: owner-signed kind 9 in `#office` `["elenta","budget"]`, `["scope",dept\|person\|office]`, `["id",k]`, `["state","warning"\|"hard_stop"\|"cleared"]`. Amounts stay local (§8.5). NIP-AM 44200 is optional. | A run crossing the limit pauses the scope and cancels its live sessions within 2 s; the next piece is refused **before** any adapter spawn; the reservation stops a start when remaining < estimate; unpriced usage blocks; the 80% warning fires once; a new month resets. |
+| E5 | **Approvals / board controls** (pause, resume, terminate) | Rebuild. Semantics from `issue-execution-policy.ts` and `docs/guides/execution-policy.md` (the executor's "done" becomes `in_review`, then the next stage participant; changes requested go back to the executor at the same stage). Controls from `server/src/services/agents.ts:1011-1070`. | Job `stages: [{type:review, by:lead}, {type:approval, by:owner}]`, default `[approval]`; `decisions[]` with author, outcome and note; person or department `status: active\|paused\|terminated`. | Approvals as in §4. Controls: owner-signed kind 9 in `#office` `["elenta","control"]`, `["act","pause"\|"resume"\|"terminate"]`, `["p",<pubkey>]` or `["dept",k]`. The engine ignores control or approval events not signed by the owner key. | Agent "done" never reaches `done` without the owner decision; changes requested return to the same stage; an approval signed by a non-owner key is ignored; pausing a person cancels the live session and blocks new pieces; terminate is irreversible; **the approval endpoint requires a session even on loopback** (not like Paperclip's `local_trusted`). |
+| E6 | **Tool gateway** (Allowed / Ask first / Off) for MCP | Rebuild, small. Do **not** port `tool-access.ts` / `tool-gateway.ts` (32k lines). Model from `doc/MCP-ACCESS-GOVERNANCE.md`: deny beats allow, and "Off" hides the tool. Deferred until we allow any MCP at all (today `mcpServers: []`). | `settings.json` `mcp: {server: {tools: {name: "allow"\|"ask"\|"off"}}}` per department; HTTP MCP only, no stdio. | Not on the relay (§3): per-call decisions go to our audit. Owner answers to "ask" requests are logged as approvals (§4 shape with `["elenta","tool-approval"]`). | An "off" tool is absent from the session's `system/init` list; "ask" waits for the owner and times out to reject; an unknown tool is rejected; `mcp__*` stays rejected by `policy.mjs` unless listed. |
+| E7 | **Secrets** | Rebuild with the pattern of `server/src/secrets/local-encrypted-provider.ts:205-220` (AES-256-GCM, 0600 master key). About 100 lines; port allowed with the MIT header. | `data/keys/` (Buzz keys, §5) and `data/secrets.enc`; the master key is in a 0600 file outside `data/`. **First: an env allowlist in `server/acp.mjs`** (PATH, HOME, LANG, TERM, the CLAUDE config dir, proxy vars only if needed), the gap measured in §13.3. | Never on the relay. | The adapter env contains only allowlisted names (no `*_SECRET`, `*_TOKEN`, `*_KEY`, `nsec1`, `BUZZ_PRIVATE_KEY`); key files are 0600; ciphertext round-trips and tampering is detected; secrets never appear in audit or SSE. |
+| E8 | **Company portability** | Rebuild. Idea only from `server/src/services/company-portability.ts` (6,459 lines; not ported). | Export `office-export.tgz`: org file, routines, library and lessons, settings minus secrets, with a `manifest.json` of sha256 per file. | Owner-signed kind 9 in `#office` `["elenta","export"]` or `["elenta","import"]`, `["x",<sha256 of manifest>]`. | Export → import yields an identical org, routines and library; secrets and keys are never exported; a tampered file is refused on import; an import into a non-empty office needs explicit confirmation. |
+
+**Phases**
+
+| Phase | Weeks | Content | Exit tests |
+|---|---|---|---|
+| P1 Runner hardening | 1 | Env allowlist (E7 first part); native cost capture from `usage_update` in `runner.mjs`; per-run cost in the job record. | E7 env test; a cost is recorded for a fake-runner session; `npm test` and `npm run live` still pass. |
+| P2 Buzz infrastructure | 1 | §9 phase 1 (compose kit, loopback, digest pin, NIP-OA off). | §9 phase 1 tests. |
+| P3 Tickets and org | 2 | E1, E2; Buzz write-only mirror (§9 phase 2) including the new tags. | E1 and E2 tests; the §9 phase 2 integration test also checks `after` and `checkout` events. |
+| P4 Budgets and controls | 1.5 | E4; the control half of E5; UI badges for paused, budget states and terminate. | E4 tests; E5 control tests; `npm run shots` updated. |
+| P5 Approval stages | 1.5 | The stage half of E5; approvals on Buzz (§4); the read path (§9 phase 3). | E5 stage tests; §9 phase 3 tests. |
+| P6 Scheduler | 1.5 | E3 (cron port, wake queue, routines UI). | E3 tests; a routine job runs end to end with approval. |
+| P7 Buzz as system of record | 1 | §9 phase 4 (hash-chained audit, cross-anchoring, nightly verify). | §9 phase 4 tests; rebuild from relay equals cache with the E2 and E4 state. |
+| P8 Optional | as needed | E6 (only when an MCP server is wanted), the rest of E7, E8. | Their tests above. |
+
+Total P1–P7: about 9.5 weeks of focused work plus review, so plan 10–12 weeks.
+
+### 13.8 Leftovers on this machine
+
+- `/home/user/paperclip`: the clone, plus 2.7 GB `node_modules` and the Rust `target/`.
+- `/home/user/paperclip-home`: embedded Postgres data, run logs, `adapter-plugins.json`,
+  `adapter-settings.json` (seven types disabled).
+- `/home/user/node24`: the Node 24.21.0 tarball and its extract.
+- `/home/user/pc-eval`: helper script and API responses.
+- Run workspaces under `elenta:experiments/paperclip-acp-adapter/work/` (git-ignored by `work/`).
+- The Paperclip dev server is stopped: it ended with SIGTERM (exit 143) after the evaluation. To
+  restart it, use the environment in §13.1 plus `PAPERCLIP_AGENT_JWT_SECRET`. Stop it by pid, because
+  `pnpm dev:stop` leaves the server orphaned (§13.1).
+- Remove everything with `rm -rf /home/user/paperclip /home/user/paperclip-home /home/user/node24 /home/user/pc-eval`.

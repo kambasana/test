@@ -1,0 +1,7 @@
+{
+  "name": "elenta-deny-process",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./index.mjs" }
+}

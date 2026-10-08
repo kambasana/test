@@ -5,11 +5,16 @@
 // What the agent gets: one claude-agent-acp session, terminal:false, mcpServers:[], tools
 // Read/Write/Edit only, settingSources [], nothing pre-approved; every permission request goes
 // through decidePermission(); fs/* requests are contained to the run workspace (writes to out/).
-// The agent never talks to Paperclip: it has no shell, no network tool and no Paperclip token.
+// The agent never talks to Paperclip: it has no shell and no network tool. CAVEAT (measured):
+// server/acp.mjs adapterEnv() copies process.env, so inside Paperclip the ACP child inherits
+// PAPERCLIP_AGENT_JWT_SECRET and every other server variable. The agent has no tool that can read
+// its env, but a real integration must pass an allowlisted env (BASE-PLATFORM.md §13.4).
 // This adapter (trusted code, running inside the Paperclip server process) reads the ticket and
 // writes the result back through the Paperclip REST API with the run's agent JWT.
 //
-// Register: put a record in $PAPERCLIP_HOME/adapter-plugins.json (see README.md) or POST /api/adapters.
+// Register (local_trusted, instance admin): POST /api/adapters/install
+//   {"packageName":"<abs path to this dir>","isLocalPath":true}
+// which writes $PAPERCLIP_HOME/adapter-plugins.json. Evidence and caveats: docs/BASE-PLATFORM.md §13.
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { mkdirSync, writeFileSync, readdirSync, readFileSync, statSync, existsSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
@@ -37,7 +42,8 @@ Fields: timeoutSec (default 300), model (optional).`;
 // synchronously inside runSession() and so sees the AsyncLocalStorage meter of this run.
 // ---------------------------------------------------------------------------------------------
 const meterStore = new AsyncLocalStorage();
-if (!Object.getOwnPropertyDescriptor(AcpConnection.prototype, 'onNotification')) {
+{
+  // Redefined on every (re)load so a hot reload never keeps a stale meter store.
   Object.defineProperty(AcpConnection.prototype, 'onNotification', {
     configurable: true,
     get() { return this.__elentaOnNotification; },
@@ -104,10 +110,16 @@ export async function execute(ctx) {
   }
 
   // Heartbeat protocol step 5: claim the ticket for this run (atomic; 409 = someone else has it).
-  await api(ctx, 'POST', `/issues/${issueId}/checkout`, {
-    agentId: agent.id, expectedStatuses: ['todo', 'backlog', 'blocked', 'in_review', 'in_progress'],
-  });
+  // The heartbeat usually checks the issue out for this run before execute(); accept that.
+  await log(`[elenta_acp] runId=${runId} agentToken=${ctx.authToken ? 'present' : 'absent'}`);
+  const before = await api(ctx, 'GET', `/issues/${issueId}`);
+  if (before.checkoutRunId !== runId) {
+    await api(ctx, 'POST', `/issues/${issueId}/checkout`, {
+      agentId: agent.id, expectedStatuses: ['todo', 'backlog', 'blocked', 'in_review', 'in_progress'],
+    });
+  }
   const issue = await api(ctx, 'GET', `/issues/${issueId}`);
+  await log(`[elenta_acp] checkout: status=${issue.status} checkoutRunId=${issue.checkoutRunId}`);
   const workspace = join(WORK_ROOT, issueId, runId);
   mkdirSync(join(workspace, 'out'), { recursive: true });
   writeFileSync(join(workspace, 'ticket.md'), `# ${issue.identifier ?? ''} ${issue.title}\n\n${issue.description ?? ''}\n`);
@@ -180,5 +192,7 @@ export async function testEnvironment(ctx) {
 }
 
 export function createServerAdapter() {
-  return { type, execute, testEnvironment, models, agentConfigurationDoc };
+  // supportsLocalAgentJwt: the heartbeat then mints a run-scoped agent JWT (ctx.authToken), so
+  // write-backs are attributed to the agent and checked as agent actions, not as the board.
+  return { type, execute, testEnvironment, models, agentConfigurationDoc, supportsLocalAgentJwt: true };
 }
