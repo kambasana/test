@@ -406,7 +406,7 @@ Memory works in several layers:
   - `BotSecret` binds a credential to a bot and an **origin**. The bot asks for it with a
     masked **secret card** (`request_secret`) and the model never sees the value.
   - Values are redacted from connector errors and payloads (`connector-safety.ts:7-40`) and
-    from auto-review prompts (`executor.ts:4278-4284`).
+    from auto-review prompts (`executor.ts:4268-4275`).
 - **Web tools:**
   - `web_search` defaults to **keyless DuckDuckGo HTML** scraping
     (`keyless-http-web.ts:24`).
@@ -608,7 +608,7 @@ Apache-2.0 obligations if we copy code:
 - **mark modified files** with a notice that we changed them, and say what changed;
 - Rakazo ships **no `NOTICE` file**, so there is no NOTICE text to carry, but we should list
   the origin, commit `40748a1` and the files in our own third-party notices;
-- do not use the Rakazo name or logo (§6 trademark clause).
+- do not use the Rakazo name or logo (Apache-2.0 §6, trademarks).
 
 Clean-room note: SPEC.md says the build is clean-room (`elenta:CLEANROOM.md`). If that rule
 covers third-party open-source code, rebuild these as ideas from this note instead of
