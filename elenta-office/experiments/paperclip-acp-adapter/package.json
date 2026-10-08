@@ -1,0 +1,9 @@
+{
+  "name": "elenta-paperclip-acp-adapter",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "description": "Experiment: a Paperclip external adapter that runs every wake through Elenta Office's ACP runner and permission policy.",
+  "exports": { ".": "./index.mjs" },
+  "engines": { "node": ">=22" }
+}
