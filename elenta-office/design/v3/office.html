@@ -1,127 +1,120 @@
 <title>Elenta Office Floor</title>
-<!-- Layout: a flat-isometric department floor (SVG cuboids) on the left, a status card on the right;
-     stacks to one column on phones. Palette and faces are CSS tokens so the SVG follows the theme. -->
+<!-- A detailed vector-isometric department floor (SVG): furniture as shaded iso prisms with CSS-token
+     faces (theme-aware); officers drawn as 2D vector figures anchored into the scene. Click a desk,
+     person or screen for a status card. Stacks to one column on phones. -->
 <style>
 :root{
-  /* light */
-  --page:#EEF1F4; --panel:#FFFFFF; --floor:#FAFBFC; --floor-edge:#E2E6EB;
-  --ink:#1E2530; --muted:#5B6673; --line:#E3E7EC; --sunk:#F3F5F8; --accent:#2F6FED;
-  --wood-top:#CDA47B; --wood-r:#B98A5E; --wood-l:#9C7247;
-  --grey-top:#E8EBEF; --grey-r:#D4D9E0; --grey-l:#BCC3CC;
-  --navy-top:#44586F; --navy-r:#36475B; --navy-l:#283646;
-  --metal:#AEB6C0; --metal-d:#8C96A2;
-  --screen:#1B2430; --screen-face:#E9EEF4; --screen-line:#C2CCD8;
-  --skin:#E6B48C; --hair:#2A2A30; --pot:#CFC7BB; --plant:#3E8E5A; --plant-d:#2F6E45;
-  --wall:#E7EAEE; --wall-d:#D6DAE0; --book1:#C06A5B; --book2:#4F7CA8; --book3:#D6A94E; --book4:#6B8E6A;
+  --page:#EDF0F3; --panel:#FFFFFF; --floor1:#FCFCFD; --floor2:#E7EBF0; --line:#E3E7EC;
+  --ink:#1E2530; --muted:#5B6673; --sunk:#F3F5F8; --accent:#2F6FED;
+  --wood-t:#CDA67E; --wood-l:#BC8E62; --wood-r:#9E744A; --wood-hi:#E4C8A2;
+  --grey-t:#E8ECF0; --grey-l:#D4DAE1; --grey-r:#BBC3CC;
+  --navy-t:#3F5069; --navy-l:#32435A; --navy-r:#263447; --navy-hi:#51melt;
+  --dark-t:#3A424D; --dark-l:#2C333D; --dark-r:#20262E;
+  --mapwater:#C3E1EF; --mapland:#B7D3A0; --route:#E0574A; --docbg:#EEF4FA; --docline:#B9C7D6;
+  --glass:rgba(181,199,216,.42); --glasshi:rgba(255,255,255,.5); --rail:#AEB7C1;
+  --metal:#B2BAC4; --metal-d:#8C96A2;
+  --book-a:#C06A5B; --book-b:#4F7CA8; --book-c:#D6A94E; --book-d:#6E8E6A; --book-e:#8A6DA6; --paper:#EEF0F3;
+  --pot:#CBB79B; --pot-d:#AF9676; --leaf:#4E9A63; --leaf-d:#357A49;
+  --led-a:#F2B23C; --led-g:#49C06A;
+  --uni-t:#6B6B45; --uni-l:#5C5C3A; --uni-r:#4A4A2E; --uni-hi:#7C7C54; --trouser:#4A4A2E;
+  --skin1:#E6B48C; --skin2:#C98C5E; --hair1:#2A2620; --hair2:#13131a; --boot:#2A2A22;
   --working:#14B8A6; --waiting:#F59E0B; --refused:#EF4444; --idle:#9CA3AF;
-  --shadow:rgba(30,38,52,.14);
+  --shadow:rgba(32,40,54,.15);
   --d-ser:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
-  --d-mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,monospace;
+  --d-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
 }
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
-  --page:#0D1016; --panel:#141A22; --floor:#171E28; --floor-edge:#273140;
-  --ink:#E7EDF4; --muted:#93A0AF; --line:#242E3A; --sunk:#10151C; --accent:#5A8DF2;
-  --wood-top:#C49A72; --wood-r:#A87E55; --wood-l:#855F3C;
-  --grey-top:#3A434F; --grey-r:#2F3844; --grey-l:#232B35;
-  --navy-top:#566B84; --navy-r:#3F5168; --navy-l:#2C3B4C;
-  --metal:#5A6472; --metal-d:#454E5A;
-  --screen:#070B10; --screen-face:#223042; --screen-line:#3A4B5F;
-  --skin:#C98F65; --hair:#15151A; --pot:#5A5346; --plant:#479A63; --plant-d:#2E6B44;
-  --wall:#2A333F; --wall-d:#212A34; --book1:#B15A4C; --book2:#43709B; --book3:#C39A40; --book4:#5E8060;
-  --shadow:rgba(0,0,0,.4); color-scheme:dark;
+  --page:#0D1016; --panel:#141A22; --floor1:#1A212C; --floor2:#10151C; --line:#242E3A;
+  --ink:#E7EDF4; --muted:#93A0AF; --sunk:#10151C; --accent:#5A8DF2;
+  --wood-t:#C1986F; --wood-l:#A77C54; --wood-r:#845E3B; --wood-hi:#D4AC80;
+  --grey-t:#3C4551; --grey-l:#2F3843; --grey-r:#232B35;
+  --navy-t:#51657E; --navy-l:#3C4E66; --navy-r:#2C3B4C;
+  --dark-t:#2B323B; --dark-l:#222830; --dark-r:#191D23;
+  --mapwater:#2C536A; --mapland:#466B3F; --docbg:#223042; --docline:#3A4B5F;
+  --glass:rgba(90,110,130,.4); --glasshi:rgba(200,215,230,.18); --rail:#5A6472;
+  --metal:#5C6673; --metal-d:#454E5A;
+  --paper:#2A333F; --pot:#5A5346; --pot-d:#443F35;
+  --skin1:#C98F65; --skin2:#A56E44; --hair1:#15131a; --hair2:#0c0c11;
+  --shadow:rgba(0,0,0,.42); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
-  --page:#0D1016; --panel:#141A22; --floor:#171E28; --floor-edge:#273140;
-  --ink:#E7EDF4; --muted:#93A0AF; --line:#242E3A; --sunk:#10151C; --accent:#5A8DF2;
-  --wood-top:#C49A72; --wood-r:#A87E55; --wood-l:#855F3C;
-  --grey-top:#3A434F; --grey-r:#2F3844; --grey-l:#232B35;
-  --navy-top:#566B84; --navy-r:#3F5168; --navy-l:#2C3B4C;
-  --metal:#5A6472; --metal-d:#454E5A;
-  --screen:#070B10; --screen-face:#223042; --screen-line:#3A4B5F;
-  --skin:#C98F65; --hair:#15151A; --pot:#5A5346; --plant:#479A63; --plant-d:#2E6B44;
-  --wall:#2A333F; --wall-d:#212A34; --book1:#B15A4C; --book2:#43709B; --book3:#C39A40; --book4:#5E8060;
-  --shadow:rgba(0,0,0,.4); color-scheme:dark;
+  --page:#0D1016; --panel:#141A22; --floor1:#1A212C; --floor2:#10151C; --line:#242E3A;
+  --ink:#E7EDF4; --muted:#93A0AF; --sunk:#10151C; --accent:#5A8DF2;
+  --wood-t:#C1986F; --wood-l:#A77C54; --wood-r:#845E3B; --wood-hi:#D4AC80;
+  --grey-t:#3C4551; --grey-l:#2F3843; --grey-r:#232B35;
+  --navy-t:#51657E; --navy-l:#3C4E66; --navy-r:#2C3B4C;
+  --dark-t:#2B323B; --dark-l:#222830; --dark-r:#191D23;
+  --mapwater:#2C536A; --mapland:#466B3F; --docbg:#223042; --docline:#3A4B5F;
+  --glass:rgba(90,110,130,.4); --glasshi:rgba(200,215,230,.18); --rail:#5A6472;
+  --metal:#5C6673; --metal-d:#454E5A;
+  --paper:#2A333F; --pot:#5A5346; --pot-d:#443F35;
+  --skin1:#C98F65; --skin2:#A56E44; --hair1:#15131a; --hair2:#0c0c11;
+  --shadow:rgba(0,0,0,.42); color-scheme:dark;
 }
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{height:100%}
-body{margin:0;background:var(--page);color:var(--ink);font-family:var(--d-ser);
-  -webkit-font-smoothing:antialiased;line-height:1.45}
-.wrap{min-height:100%;display:flex;flex-direction:column;padding-inline:16px;padding-block:14px;max-width:1280px;margin:0 auto;gap:12px}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--d-ser);line-height:1.45;-webkit-font-smoothing:antialiased}
+.wrap{min-height:100%;display:flex;flex-direction:column;gap:12px;padding-inline:16px;padding-block:14px;max-width:1320px;margin:0 auto}
 header{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .brand{display:flex;align-items:center;gap:9px;font-weight:600;letter-spacing:-.01em}
-.brand i{width:16px;height:16px;border-radius:5px;background:linear-gradient(135deg,var(--accent),#7aa0f7);display:block}
-.crumb{color:var(--muted);font-size:13px}
-.crumb b{color:var(--ink);font-weight:600}
-.spcr{flex:1}
-.toggle{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;
-  width:34px;height:34px;cursor:pointer;font-size:15px;line-height:1}
+.brand i{width:16px;height:16px;border-radius:5px;background:linear-gradient(135deg,var(--accent),#7aa0f7)}
+.crumb{color:var(--muted);font-size:13px}.crumb b{color:var(--ink);font-weight:600}
+.sp{flex:1}
+.toggle{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;width:34px;height:34px;cursor:pointer;font-size:15px}
 .toggle:hover{color:var(--ink)}
 .stage{display:grid;grid-template-columns:1fr 340px;gap:12px;flex:1;min-height:0}
-@media (max-width:820px){.stage{grid-template-columns:1fr}}
-.floorcard{position:relative;background:
-  radial-gradient(130% 100% at 50% 8%,var(--floor) 0%,var(--floor) 58%,var(--floor-edge) 100%);
-  border:1px solid var(--line);border-radius:16px;overflow:hidden;min-height:360px}
+@media (max-width:860px){.stage{grid-template-columns:1fr}}
+.floorcard{position:relative;background:radial-gradient(135% 110% at 48% 2%,var(--floor1) 0%,var(--floor1) 55%,var(--floor2) 100%);
+  border:1px solid var(--line);border-radius:16px;overflow:hidden;min-height:380px}
 svg.scene{display:block;width:100%;height:100%}
-.hint{position:absolute;left:14px;top:12px;font-size:12px;color:var(--muted);
-  background:color-mix(in srgb,var(--panel) 80%,transparent);border:1px solid var(--line);
-  padding:4px 9px;border-radius:999px;backdrop-filter:blur(3px)}
-.legend{position:absolute;left:14px;bottom:12px;display:flex;gap:12px;flex-wrap:wrap;
-  background:color-mix(in srgb,var(--panel) 82%,transparent);border:1px solid var(--line);
-  padding:7px 11px;border-radius:10px;font-size:12px;backdrop-filter:blur(3px)}
+.hint{position:absolute;left:14px;top:12px;font-size:12px;color:var(--muted);background:color-mix(in srgb,var(--panel) 82%,transparent);
+  border:1px solid var(--line);padding:4px 9px;border-radius:999px}
+.legend{position:absolute;left:14px;bottom:12px;display:flex;gap:11px;flex-wrap:wrap;background:color-mix(in srgb,var(--panel) 85%,transparent);
+  border:1px solid var(--line);padding:7px 11px;border-radius:10px;font-size:12px}
 .legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
 .dot{width:9px;height:9px;border-radius:50%;display:inline-block}
 .station{cursor:pointer}
-.station .ring{opacity:0;transition:opacity .15s}
-.station.sel .selbox{opacity:1}
 .selbox{opacity:0;transition:opacity .12s}
+.station:hover .selbox,.station:focus-visible .selbox{opacity:.5}
+.station.sel .selbox{opacity:1}
 .station:focus{outline:none}
-.station:focus-visible .selbox,.station:hover .selbox{opacity:.55}
-.station.sel:hover .selbox,.station.sel:focus-visible .selbox{opacity:1}
-/* face fills driven by tokens, so the whole scene is theme-aware */
-.top{} .left{} .right{}
-.wood.top{fill:var(--wood-top)} .wood.right{fill:var(--wood-r)} .wood.left{fill:var(--wood-l)}
-.grey.top{fill:var(--grey-top)} .grey.right{fill:var(--grey-r)} .grey.left{fill:var(--grey-l)}
-.navy.top{fill:var(--navy-top)} .navy.right{fill:var(--navy-r)} .navy.left{fill:var(--navy-l)}
-.screenbox.top{fill:#0e141c} .screenbox.right{fill:var(--screen)} .screenbox.left{fill:var(--screen)}
-.wall.top{fill:var(--wall)} .wall.right{fill:var(--wall-d)} .wall.left{fill:var(--wall-d)}
+/* theme-aware faces */
+.wood.t{fill:var(--wood-t)}.wood.l{fill:var(--wood-l)}.wood.r{fill:var(--wood-r)}
+.grey.t{fill:var(--grey-t)}.grey.l{fill:var(--grey-l)}.grey.r{fill:var(--grey-r)}
+.navy.t{fill:var(--navy-t)}.navy.l{fill:var(--navy-l)}.navy.r{fill:var(--navy-r)}
+.dark.t{fill:var(--dark-t)}.dark.l{fill:var(--dark-l)}.dark.r{fill:var(--dark-r)}
+.metalf{fill:var(--metal)}.metaldf{fill:var(--metal-d)}
+.woodhi{fill:var(--wood-hi)}.railf{fill:var(--rail)}
+.glass{fill:var(--glass)}.glasshi{fill:var(--glasshi)}
 .contact{fill:var(--shadow)}
-.screenface{fill:var(--screen-face)}
-.sline{stroke:var(--screen-line);stroke-width:1.4;stroke-linecap:round}
-.pole{fill:var(--metal-d)} .base{fill:var(--metal)}
-.head{fill:var(--skin)} .hair{fill:var(--hair)}
-.selbox{fill:none;stroke:var(--accent);stroke-width:2.2;stroke-dasharray:5 4}
-.st-working{fill:var(--working)} .st-waiting{fill:var(--waiting)}
-.st-refused{fill:var(--refused)} .st-idle{fill:var(--idle)}
-.floorlabel{fill:var(--muted);font:600 11px/1 var(--d-mono);letter-spacing:.06em}
-/* status panel */
+.selbox{fill:none;stroke:var(--accent);stroke-width:2.4;stroke-dasharray:6 5}
+.st-working{fill:var(--working)}.st-waiting{fill:var(--waiting)}.st-refused{fill:var(--refused)}.st-idle{fill:var(--idle)}
+/* panel */
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
-.panel .empty{padding:28px 22px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;gap:8px}
-.panel .empty b{color:var(--ink);font-size:14px}
+.empty{padding:26px 22px;color:var(--muted);font-size:13px;display:flex;flex-direction:column;gap:8px}
+.empty b{color:var(--ink);font-size:14px}
 .phead{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
-.phead .row1{display:flex;align-items:center;gap:9px}
-.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;
-  padding:3px 9px;border-radius:999px;border:1px solid transparent}
+.row1{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid transparent}
 .pill .dot{width:8px;height:8px}
 .pill.working{color:#0c7566;background:color-mix(in srgb,var(--working) 16%,transparent);border-color:color-mix(in srgb,var(--working) 38%,transparent)}
 .pill.waiting{color:#8a5a00;background:color-mix(in srgb,var(--waiting) 18%,transparent);border-color:color-mix(in srgb,var(--waiting) 42%,transparent)}
 .pill.refused{color:#a51f1f;background:color-mix(in srgb,var(--refused) 16%,transparent);border-color:color-mix(in srgb,var(--refused) 40%,transparent)}
 .pill.idle{color:var(--muted);background:var(--sunk);border-color:var(--line)}
+:root[data-theme="dark"] .pill.working,.pill.working{}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pill.working{color:#4ad8c8}
-  :root:not([data-theme="light"]) .pill.waiting{color:#f2b65a} :root:not([data-theme="light"]) .pill.refused{color:#f58080}}
-:root[data-theme="dark"] .pill.working{color:#4ad8c8}
-:root[data-theme="dark"] .pill.waiting{color:#f2b65a}
-:root[data-theme="dark"] .pill.refused{color:#f58080}
+  :root:not([data-theme="light"]) .pill.waiting{color:#f2b65a}:root:not([data-theme="light"]) .pill.refused{color:#f58080}}
+:root[data-theme="dark"] .pill.working{color:#4ad8c8}:root[data-theme="dark"] .pill.waiting{color:#f2b65a}:root[data-theme="dark"] .pill.refused{color:#f58080}
 .pname{font-size:18px;font-weight:600;letter-spacing:-.01em}
 .prole{font-size:12.5px;color:var(--muted)}
 .pbody{padding:14px 18px;display:flex;flex-direction:column;gap:14px;overflow:auto}
 .k{font:600 11px/1 var(--d-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
 .task{margin-top:5px;font-size:13.5px}
-.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.meta .v{margin-top:3px;font-size:13px}
+.meta{display:grid;grid-template-columns:1fr 1fr;gap:12px}.meta .v{margin-top:3px;font-size:13px}
 .mono{font-family:var(--d-mono)}
 .readlist{margin:5px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:12.5px}
-.readlist li{display:flex;gap:7px;align-items:baseline;color:var(--ink)}
+.readlist li{display:flex;gap:7px;align-items:baseline}
 .readlist li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);flex:0 0 auto;transform:translateY(5px)}
 .tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:5px}
 .chip{font:12px/1 var(--d-mono);padding:4px 8px;border-radius:7px;border:1px solid var(--line);background:var(--sunk);color:var(--muted)}
@@ -129,43 +122,36 @@ svg.scene{display:block;width:100%;height:100%}
 .chip.ask{border-color:color-mix(in srgb,var(--waiting) 50%,var(--line));color:var(--waiting)}
 .note{font-size:12.5px;color:var(--muted);background:var(--sunk);border:1px solid var(--line);border-radius:9px;padding:9px 11px}
 .pfoot{margin-top:auto;padding:12px 18px;border-top:1px solid var(--line);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
-.closebtn{margin-left:auto;border:1px solid var(--line);background:var(--panel);color:var(--muted);
-  border-radius:8px;padding:5px 11px;cursor:pointer;font-size:12px}
+.closebtn{margin-left:auto;border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;padding:5px 11px;cursor:pointer;font-size:12px}
 .closebtn:hover{color:var(--ink)}
-.demo{font-size:11px;color:var(--muted);text-align:center;padding-top:2px}
+.demo{font-size:11px;color:var(--muted);text-align:center}
 </style>
 
 <div class="wrap">
   <header>
     <span class="brand"><i></i>Elenta Office</span>
     <span class="crumb">Office&nbsp;/&nbsp;Military&nbsp;/&nbsp;<b>Intelligence</b></span>
-    <span class="spcr"></span>
-    <button class="toggle" id="theme" title="Toggle light / dark" aria-label="Toggle light or dark theme">◐</button>
+    <span class="sp"></span>
+    <button class="toggle" id="theme" aria-label="Toggle light or dark theme">◐</button>
   </header>
-
   <div class="stage">
     <div class="floorcard">
       <div class="hint">Click a desk, person or screen to see their status</div>
       <svg class="scene" id="scene" role="group" aria-label="Isometric floor of the Intelligence department"></svg>
       <div class="legend" aria-hidden="true">
-        <span><i class="dot st-working" style="background:var(--working)"></i>Working</span>
+        <span><i class="dot" style="background:var(--working)"></i>Working</span>
         <span><i class="dot" style="background:var(--waiting)"></i>Waiting for you</span>
         <span><i class="dot" style="background:var(--refused)"></i>Refused / stopped</span>
         <span><i class="dot" style="background:var(--idle)"></i>Idle</span>
       </div>
     </div>
-
-    <aside class="panel" id="panel">
-      <div class="empty" id="empty">
-        <b>Nobody selected</b>
-        Pick a teammate on the floor to see what they're doing right now — their task, what they've read, which tools they're allowed, and what it has cost.
-      </div>
+    <aside class="panel">
+      <div class="empty" id="empty"><b>Nobody selected</b>
+        Pick a teammate on the floor to see what they're doing now — their task, what they've read, which tools they're allowed, and what it has cost.</div>
       <div hidden id="card">
         <div class="phead">
-          <div class="row1"><span class="pill" id="p-pill"><span class="dot"></span><span id="p-state"></span></span>
-            <span class="k" id="p-team"></span></div>
-          <div class="pname" id="p-name"></div>
-          <div class="prole" id="p-role"></div>
+          <div class="row1"><span class="pill" id="p-pill"><span class="dot"></span><span id="p-state"></span></span><span class="k" id="p-team"></span></div>
+          <div class="pname" id="p-name"></div><div class="prole" id="p-role"></div>
         </div>
         <div class="pbody">
           <div><div class="k">Doing now</div><div class="task" id="p-task"></div></div>
@@ -179,8 +165,7 @@ svg.scene{display:block;width:100%;height:100%}
           <div><div class="k">Tools</div><div class="tools" id="p-tools"></div></div>
           <div class="note" id="p-note" hidden></div>
         </div>
-        <div class="pfoot"><span id="p-foot"></span>
-          <button class="closebtn" id="close">Close</button></div>
+        <div class="pfoot"><span id="p-foot"></span><button class="closebtn" id="close">Close</button></div>
       </div>
     </aside>
   </div>
@@ -188,237 +173,361 @@ svg.scene{display:block;width:100%;height:100%}
 </div>
 
 <script>
-/* ---- real Intelligence-department people, with sample live status ---- */
-const PEOPLE = [
-  {id:"mil-j2-lead", name:"INTELLIGENCE LEAD", team:"COMMAND", role:"Department lead",
-   state:"working", shirt:"navy", model:"Opus", cost:"$0.48", upd:"just now",
-   task:"Combining the four sub-team pieces into one intelligence estimate for sign-off.",
-   read:["library/military/requirements-traceability.md","3 sub-team pieces in out/"],
-   tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
-  {id:"mil-allsource", name:"ALL-SOURCE ANALYST", team:"ALL-SOURCE INTEL (J2)", role:"Fuses reporting into assessments",
-   state:"working", shirt:"teal", model:"Sonnet", cost:"$0.12", upd:"40s ago",
-   task:"Fusing the supplied reporting into an assessment with confidence levels and stated gaps.",
-   read:["job/inbox/reporting-pack.md","library/shared/house-style.md"],
-   tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
-  {id:"mil-threat", name:"THREAT ANALYST", team:"ALL-SOURCE INTEL (J2)", role:"Adversary capability and doctrine",
-   state:"working", shirt:"red", model:"Sonnet", cost:"$0.09", upd:"1 min ago",
-   task:"Drafting likely courses of action from the supplied and open-source material.",
-   read:["job/inbox/reporting-pack.md"],
-   tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
-  {id:"mil-osint", name:"OSINT ANALYST", team:"ISR & RECCE", role:"Open-source intelligence",
-   state:"waiting", shirt:"grey", model:"Sonnet", cost:"$0.07", upd:"2 min ago",
-   task:"Needs your OK to treat a public datasheet as the source for the supplier spec.",
-   note:"Waiting on you — the job is paused at this step until you decide.",
-   read:["library/military/data-logger-overview.md"],
-   tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"ask",Connectors:"off"}},
-  {id:"mil-ci", name:"COUNTER-INTEL & SECURITY", team:"ALL-SOURCE INTEL (J2)", role:"Protective security and OPSEC",
-   state:"refused", shirt:"navy", model:"Sonnet", cost:"$0.04", upd:"5 min ago",
-   task:"Stopped: asked to fetch a page from the web, which this office does not allow.",
-   note:"Refused and logged. No shell, no web access was granted for this job.",
-   read:["library/shared/glossary.md"],
-   tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
-  {id:"mil-sigint", name:"SIGINT ANALYST", team:"TECHNICAL INTEL", role:"Signals intelligence analysis",
-   state:"idle", shirt:"teal", model:"Sonnet", cost:"$0.00", upd:"18 min ago",
-   task:"Idle — no piece assigned on the current job.",
-   read:[],
-   tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
-  {id:"mil-imagery", name:"IMAGERY/GEOINT ANALYST", team:"ISR & RECCE", role:"Interprets supplied imagery",
-   state:"idle", shirt:"red", model:"Sonnet", cost:"$0.00", upd:"22 min ago",
-   task:"Idle — waiting for imagery to be added to the job folder.",
-   read:[],
-   tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
+const NS="http://www.w3.org/2000/svg";
+const COS=0.866, SIN=0.5, S=26;
+const pt=(x,y,z)=>[(x-y)*COS*S, (x+y)*SIN*S - z*S];
+const el=(n,a)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);return e;};
+const poly=(pts,cls)=>el("polygon",{points:pts.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" "),class:cls});
+const add=(g,e)=>{g.appendChild(e);return e;};
+function groupEl(){return document.createElementNS(NS,"g");}
+/* a shaded box: material class like "wood" → faces .wood.t/.l/.r */
+function prism(g,x,y,z,w,d,h,mat,topHi){
+  const T=[[x,y,z+h],[x+w,y,z+h],[x+w,y+d,z+h],[x,y+d,z+h]].map(p=>pt(...p));
+  const L=[[x,y+d,z+h],[x+w,y+d,z+h],[x+w,y+d,z],[x,y+d,z]].map(p=>pt(...p));
+  const R=[[x+w,y,z+h],[x+w,y+d,z+h],[x+w,y+d,z],[x+w,y,z]].map(p=>pt(...p));
+  add(g,poly(R,mat+" r")); add(g,poly(L,mat+" l")); add(g,poly(T,mat+" t"));
+  if(topHi){const hw=Math.min(w,0.08);add(g,poly([pt(x,y,z+h),pt(x+w,y,z+h),pt(x+w,y+hw,z+h),pt(x,y+hw,z+h)],"woodhi"));}
+}
+/* bilinear point inside a quad given uv in [0,1] */
+function onQuad(q,u,v){const top=[q[0][0]+(q[1][0]-q[0][0])*u,q[0][1]+(q[1][1]-q[0][1])*u];
+  const bot=[q[3][0]+(q[2][0]-q[3][0])*u,q[3][1]+(q[2][1]-q[3][1])*u];
+  return [top[0]+(bot[0]-top[0])*v, top[1]+(bot[1]-top[1])*v];}
+function shadow(g,cx,cy,rx,ry){add(g,el("ellipse",{cx,cy,rx,ry,class:"contact",filter:"url(#soft)"}));}
+
+/* ---------- furniture ---------- */
+function deskUnit(x,y,{L=false}={}){ // person on +x side, faces -x; monitor at -x edge
+  const g=groupEl(); const w=2.6,d=1.5;
+  const base=pt(x+w*0.5,y+d*0.5,0); shadow(g,base[0],base[1]+10,w*20,w*9);
+  // metal legs on the -x side
+  prism(g,x+0.05,y+0.08,0,0.08,0.08,0.78,"metaldf"); prism(g,x+0.05,y+d-0.16,0,0.08,0.08,0.78,"metaldf");
+  // pedestal (drawers) on +x side
+  prism(g,x+w-0.95,y+0.12,0,0.9,d-0.24,0.78,"grey");
+  const pedFace=[pt(x+w-0.95,y+d-0.12,0.78),pt(x+w-0.05,y+d-0.12,0.78),pt(x+w-0.05,y+d-0.12,0),pt(x+w-0.95,y+d-0.12,0)];
+  for(let i=0;i<3;i++){const v=0.2+i*0.26; const a=onQuad(pedFace,0.18,v),b=onQuad(pedFace,0.82,v);
+    add(g,el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:"var(--grey-r)","stroke-width":1}));
+    const h=onQuad(pedFace,0.4,v-0.04),h2=onQuad(pedFace,0.6,v-0.04);
+    add(g,el("line",{x1:h[0],y1:h[1],x2:h2[0],y2:h2[1],stroke:"var(--metal-d)","stroke-width":2.4,"stroke-linecap":"round"}));}
+  // top (+ L return)
+  prism(g,x,y,0.78,w,d,0.06,"wood",true);
+  if(L){prism(g,x+w-0.02,y+d-0.02,0,0.9,1.4,0.78,"grey"); prism(g,x+w-0.02,y+d-0.02,0.78,0.95,1.45,0.06,"wood",true);}
+  return {g,base,w,d};
+}
+function monitor(g,x,y,z,kind,status){ // screen on +x (right) face, facing the person
+  const mw=0.1,md=1.0,mh=0.66, mx=x,my=y+0.15;
+  // stand
+  prism(g,mx+0.3,my+md/2-0.03,z,0.12,0.06,0.18,"dark"); add(g,el("ellipse",{cx:pt(mx+0.36,my+md/2,z)[0],cy:pt(mx+0.36,my+md/2,z)[1],rx:12,ry:5,class:"dark r"}));
+  // bezel
+  prism(g,mx,my,z+0.18,mw,md,mh,"dark");
+  // screen quad on +x face, inset
+  const zb=z+0.18+0.05, zt=z+0.18+mh-0.05, ya=my+0.06, yb=my+md-0.06, xf=mx+mw;
+  const q=[pt(xf,ya,zt),pt(xf,yb,zt),pt(xf,yb,zb),pt(xf,ya,zb)];
+  if(kind==="map"||kind==="dual1"){
+    add(g,poly(q,"")).setAttribute("fill","var(--mapwater)");
+    const land=[[.08,.15],[.42,.06],[.62,.3],[.78,.24],[.7,.62],[.4,.82],[.12,.66]].map(p=>onQuad(q,p[0],p[1]));
+    add(g,poly(land,"")).setAttribute("fill","var(--mapland)");
+    const route=[[.2,.72],[.38,.54],[.5,.4],[.66,.34],[.76,.2]].map(p=>onQuad(q,p[0],p[1]));
+    add(g,el("polyline",{points:route.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" "),fill:"none",stroke:"var(--route)","stroke-width":2,"stroke-dasharray":"4 3"}));
+    for(const uv of [[.2,.72],[.76,.2],[.5,.4]]){const p=onQuad(q,uv[0],uv[1]);add(g,el("circle",{cx:p[0],cy:p[1],r:2.6,fill:"var(--route)"}));}
+  } else {
+    add(g,poly(q,"")).setAttribute("fill","var(--docbg)");
+    for(let i=0;i<5;i++){const a=onQuad(q,.1,.16+i*.15),b=onQuad(q,i===0?.55:.86,.16+i*.15);
+      add(g,el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:i===0?"var(--accent)":"var(--docline)","stroke-width":i===0?2.4:1.6,"stroke-linecap":"round"}));}
+  }
+  // status glow strip at the screen's bottom
+  const gl=[onQuad(q,.1,.9),onQuad(q,.5,.9),onQuad(q,.5,.97),onQuad(q,.1,.97)];
+  add(g,poly(gl,"st-"+status));
+}
+function keyboard(g,x,y,z){prism(g,x,y,z,0.9,0.34,0.03,"grey"); add(g,el("ellipse",{cx:pt(x+1.15,y+0.17,z)[0],cy:pt(x+1.15,y+0.17,z)[1],rx:5,ry:3,class:"grey t"}));}
+function lamp(g,x,y,z){add(g,el("ellipse",{cx:pt(x,y,z)[0],cy:pt(x,y,z)[1],rx:7,ry:3.4,class:"navy r"}));
+  const b=pt(x,y,z),top=pt(x,y,z+0.34),arm=pt(x-0.26,y-0.08,z+0.44);
+  add(g,el("line",{x1:b[0],y1:b[1],x2:top[0],y2:top[1],stroke:"var(--navy-l)","stroke-width":3,"stroke-linecap":"round"}));
+  add(g,el("line",{x1:top[0],y1:top[1],x2:arm[0],y2:arm[1],stroke:"var(--navy-l)","stroke-width":3,"stroke-linecap":"round"}));
+  add(g,el("path",{d:`M ${arm[0]-6} ${arm[1]-2} l 12 0 l -3 7 l -6 0 z`,fill:"var(--navy-t)"}));}
+function binders(g,x,y,z){const cols=["--book-b","--book-a","--book-c","--book-d"];
+  for(let i=0;i<4;i++){const b=groupEl();prism(b,x+i*0.16,y,z,0.14,0.34,0.44,"bind"+i);g.appendChild(b);
+    b.querySelectorAll("polygon").forEach(p=>{p.style.fill=`var(${cols[i]})`; if(p.classList.contains("r"))p.style.filter="brightness(.82)"; if(p.classList.contains("l"))p.style.filter="brightness(.92)";});}}
+function divider(g,x,y,len){ // clean frosted-glass panel on a metal rail, along +y
+  prism(g,x,y,0.78,0.06,len,0.6,"dk");
+  const pnl=[...g.querySelectorAll("polygon")].slice(-3);
+  pnl[0].setAttribute("class","glass"); pnl[1].setAttribute("class","glass"); pnl[2].setAttribute("class","glasshi");
+  prism(g,x-0.01,y,1.38,0.08,len,0.05,"dk");
+  [...g.querySelectorAll("polygon")].slice(-3).forEach(p=>p.setAttribute("class","railf"));
+}
+function plant(g,x,y,size=1){const s=size;shadow(g,pt(x,y,0)[0],pt(x,y,0)[1]+6,16*s,7*s);
+  prism(g,x-0.17*s,y-0.17*s,0,0.34*s,0.34*s,0.32*s,"pot");
+  const polys=[...g.querySelectorAll("polygon")].slice(-3);
+  polys[0].style.fill="var(--pot-d)";polys[1].style.fill="var(--pot-d)";polys[2].style.fill="var(--pot)";
+  const c=pt(x,y,0.32*s);
+  const leaf=(dx,dy,rot,col)=>{const L=document.createElementNS(NS,"path");
+    L.setAttribute("d",`M ${c[0]+dx} ${c[1]+dy} q ${8*s} ${-20*s} 0 ${-34*s} q ${-8*s} ${14*s} 0 ${34*s} z`);
+    L.setAttribute("fill",`var(${col})`);L.setAttribute("transform",`rotate(${rot} ${c[0]+dx} ${c[1]+dy})`);g.appendChild(L);};
+  leaf(0,-4*s,0,"--leaf");leaf(-6*s,-2*s,-32,"--leaf-d");leaf(6*s,-2*s,30,"--leaf-d");
+  leaf(-3*s,-3*s,-15,"--leaf");leaf(4*s,-3*s,16,"--leaf");}
+function filing(g,x,y,printer){const w=1.7,d=0.9,h=1.0;shadow(g,pt(x+w/2,y+d/2,0)[0],pt(x+w/2,y+d/2,0)[1]+9,w*19,w*9);
+  prism(g,x,y,0,w,d,h,"grey");
+  const face=[pt(x,y+d,h),pt(x+w,y+d,h),pt(x+w,y+d,0),pt(x,y+d,0)];
+  for(let i=0;i<3;i++){const v=0.2+i*0.27;const a=onQuad(face,0.12,v),b=onQuad(face,0.88,v);
+    add(g,el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:"var(--grey-r)","stroke-width":1}));
+    const h1=onQuad(face,0.42,v-0.05),h2=onQuad(face,0.58,v-0.05);
+    add(g,el("line",{x1:h1[0],y1:h1[1],x2:h2[0],y2:h2[1],stroke:"var(--metal-d)","stroke-width":2.6,"stroke-linecap":"round"}));}
+  if(printer){prism(g,x+0.3,y+0.1,h,1.0,0.7,0.4,"grey"); prism(g,x+0.45,y+0.0,h+0.4,0.6,0.16,0.04,"paper");}}
+function bookshelf(g,x,y){const w=3.0,d=0.8,h=2.4;shadow(g,pt(x+w/2,y+d/2,0)[0],pt(x+w/2,y+d/2,0)[1]+10,w*17,w*8);
+  prism(g,x,y,0,w,d,h,"wood");
+  const back=[pt(x+0.08,y+d-0.02,h-0.1),pt(x+w-0.08,y+d-0.02,h-0.1),pt(x+w-0.08,y+d-0.02,0.1),pt(x+0.08,y+d-0.02,0.1)];
+  add(g,poly(back,"")).setAttribute("fill","var(--wood-r)");
+  // 2 shelves x 3 cubbies with binders / paper
+  const cols=["--book-b","--book-a","--book-c","--book-d","--book-e"];
+  for(let row=0;row<2;row++)for(let col=0;col<3;col++){
+    const cx=x+0.18+col*0.92, cz=0.22+row*1.05;
+    for(let i=0;i<4;i++){const bb=groupEl();prism(bb,cx+i*0.16,y+0.12,cz,0.13,0.5,0.62,"bk");g.appendChild(bb);
+      const c=cols[(col*4+i+row)%cols.length];
+      bb.querySelectorAll("polygon").forEach(p=>{p.style.fill=`var(${c})`;if(p.classList.contains("r"))p.style.filter="brightness(.82)";if(p.classList.contains("l"))p.style.filter="brightness(.92)";});}
+    // a stack of paper beside
+    prism(g,cx+0.66,y+0.2,cz,0.22,0.5,0.14,"paperbox");
+    [...g.querySelectorAll("polygon")].slice(-3).forEach(p=>p.style.fill="var(--paper)");
+  }}
+function serverRack(g,x,y){const w=0.9,d=0.8,h=2.0;shadow(g,pt(x+w/2,y+d/2,0)[0],pt(x+w/2,y+d/2,0)[1]+9,w*17,w*9);
+  prism(g,x,y,0,w,d,h,"dark");
+  const face=[pt(x,y+d,h),pt(x+w,y+d,h),pt(x+w,y+d,0),pt(x,y+d,0)];
+  for(let i=0;i<7;i++){const v=0.08+i*0.12;const a=onQuad(face,0.1,v),b=onQuad(face,0.9,v);
+    add(g,el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:"#11151b","stroke-width":1.4}));
+    const led=onQuad(face,0.2,v+0.03);add(g,el("circle",{cx:led[0],cy:led[1],r:1.8,fill:i%2?"var(--led-g)":"var(--led-a)"}));
+    const led2=onQuad(face,0.3,v+0.03);add(g,el("circle",{cx:led2[0],cy:led2[1],r:1.8,fill:"var(--led-g)"}));}
+  // radio handset on top
+  prism(g,x+0.2,y+0.2,h,0.5,0.4,0.18,"dark");}
+function mapTable(g,x,y){const w=3.2,d=1.7;shadow(g,pt(x+w/2,y+d/2,0)[0],pt(x+w/2,y+d/2,0)[1]+11,w*18,w*9);
+  for(const[lx,ly] of [[0.1,0.1],[w-0.18,0.1],[0.1,d-0.18],[w-0.18,d-0.18]]) prism(g,x+lx,y+ly,0,0.1,0.1,0.72,"metaldf");
+  prism(g,x,y,0.72,w,d,0.06,"wood",true);
+  // big map on the table top
+  const top=[pt(x+0.2,y+0.2,0.78),pt(x+w-0.2,y+0.2,0.78),pt(x+w-0.2,y+d-0.2,0.78),pt(x+0.2,y+d-0.2,0.78)];
+  add(g,poly(top,"")).setAttribute("fill","var(--mapwater)");
+  const land=[[.1,.2],[.45,.08],[.7,.3],[.9,.25],[.82,.7],[.5,.9],[.14,.7]].map(p=>onQuad(top,p[0],p[1]));
+  add(g,poly(land,"")).setAttribute("fill","var(--mapland)");
+  const route=[[.2,.75],[.4,.55],[.55,.42],[.72,.34],[.86,.22]].map(p=>onQuad(top,p[0],p[1]));
+  add(g,el("polyline",{points:route.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" "),fill:"none",stroke:"var(--route)","stroke-width":2.6,"stroke-dasharray":"5 4"}));
+  for(const uv of [[.2,.75],[.86,.22],[.55,.42]]){const p=onQuad(top,uv[0],uv[1]);add(g,el("circle",{cx:p[0],cy:p[1],r:3.2,fill:"var(--route)"}));}
+  // scattered papers + a book
+  const pap=[pt(x+0.3,y+0.3,0.84),pt(x+0.9,y+0.3,0.84),pt(x+0.9,y+0.8,0.84),pt(x+0.3,y+0.8,0.84)];
+  add(g,poly(pap,"")).setAttribute("fill","var(--paper)");
+  prism(g,x+w-0.9,y+d-0.6,0.78,0.5,0.4,0.08,"nb");[...g.querySelectorAll("polygon")].slice(-3).forEach(p=>p.style.fill="var(--navy-t)");}
+function projector(g,x,y){const w=0.1,sw=3.0,sh=1.9;
+  // stand
+  for(const dx of [0.2,sw-0.2]){const a=pt(x+dx,y+0.2,0),b=pt(x+dx,y+0.2,0.3);add(g,el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:"var(--metal-d)","stroke-width":3}));
+    add(g,el("ellipse",{cx:a[0],cy:a[1],rx:5,ry:2.5,class:"metaldf"}));}
+  // screen (vertical plane facing +x/+y toward room): draw on the x face
+  const zb=0.3,zt=0.3+sh;
+  const q=[pt(x+w,y,zt),pt(x+w,y+sw,zt),pt(x+w,y+sw,zb),pt(x+w,y,zb)];
+  const frame=[pt(x,y,zt+0.06),pt(x+w,y+sw+0.0,zt+0.06),pt(x+w,y+sw,zb-0.06),pt(x,y,zb-0.06)];
+  add(g,poly(q,"")).setAttribute("fill","var(--mapwater)");
+  const land=[[.05,.2],[.4,.08],[.62,.34],[.52,.7],[.2,.74]].map(p=>onQuad(q,p[0],p[1]));
+  add(g,poly(land,"")).setAttribute("fill","var(--mapland)");
+  const route=[[.12,.6],[.32,.46],[.5,.36],[.6,.3]].map(p=>onQuad(q,p[0],p[1]));
+  add(g,el("polyline",{points:route.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" "),fill:"none",stroke:"var(--route)","stroke-width":2.4,"stroke-dasharray":"5 4"}));
+  for(let i=0;i<3;i++){const a=onQuad(q,.72,.3+i*.12),b=onQuad(q,.92,.3+i*.12);
+    add(g,el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:"var(--docline)","stroke-width":2,"stroke-linecap":"round"}));
+    const d=onQuad(q,.68,.3+i*.12);add(g,el("circle",{cx:d[0],cy:d[1],r:2.4,fill:["var(--leaf)","var(--route)","var(--book-c)"][i]}));}
+  // thin bezel
+  add(g,el("polygon",{points:q.map(p=>p[0].toFixed(1)+","+p[1].toFixed(1)).join(" "),fill:"none",stroke:"var(--rail)","stroke-width":3}));
+}
+
+/* ---------- characters (2D vector, anchored) ---------- */
+function seatedOfficer(g,sx,sy,pal){
+  const a=pt(sx,sy,0.55), ax=a[0], ay=a[1];
+  const c=groupEl(); g.appendChild(c);
+  const P=(dx,dy)=>`${(ax+dx).toFixed(1)} ${(ay+dy).toFixed(1)}`;
+  // torso (we see the back), leaning up-left toward the desk
+  add(c,el("path",{d:`M ${P(-11,2)} L ${P(-15,-20)} Q ${P(-19,-36)} ${P(-12,-42)} L ${P(-2,-45)} L ${P(8,-43)} Q ${P(15,-36)} ${P(12,-20)} L ${P(9,2)} Z`,fill:`var(${pal.uni})`}));
+  add(c,el("path",{d:`M ${P(-2,-45)} L ${P(8,-43)} Q ${P(15,-36)} ${P(12,-20)} L ${P(4,-22)} Q ${P(6,-34)} ${P(-1,-42)} Z`,fill:"var(--uni-r)",opacity:.5}));
+  // two arms resting forward on the desk, hands near the keyboard (up-left)
+  add(c,el("path",{d:`M ${P(11,-27)} Q ${P(2,-24)} ${P(-20,-29)}`,fill:"none",stroke:"var(--uni-l)","stroke-width":8,"stroke-linecap":"round"}));
+  add(c,el("ellipse",{cx:ax-21,cy:ay-29,rx:4,ry:3.4,fill:`var(${pal.skin})`}));
+  add(c,el("path",{d:`M ${P(-13,-33)} Q ${P(-24,-33)} ${P(-35,-35)}`,fill:"none",stroke:"var(--uni-r)","stroke-width":8,"stroke-linecap":"round"}));
+  add(c,el("ellipse",{cx:ax-36,cy:ay-35,rx:4,ry:3.4,fill:`var(${pal.skin})`}));
+  // rank tabs
+  add(c,el("line",{x1:ax-12,y1:ay-40,x2:ax-6,y2:ay-42,stroke:"var(--uni-hi)","stroke-width":2.6}));
+  add(c,el("line",{x1:ax+6,y1:ay-40,x2:ax+12,y2:ay-38,stroke:"var(--uni-hi)","stroke-width":2.6}));
+  // neck + head + hair
+  add(c,el("path",{d:`M ${P(-4,-44)} l 8 0 l 0 -6 l -8 0 z`,fill:`var(${pal.skin})`}));
+  add(c,el("ellipse",{cx:ax-5,cy:ay-55,rx:10.5,ry:12.5,fill:`var(${pal.skin})`}));
+  if(pal.bun){add(c,el("ellipse",{cx:ax+4,cy:ay-52,rx:6,ry:6,fill:`var(${pal.hair})`}));
+    add(c,el("path",{d:`M ${ax-15} ${ay-56} a 11 13 0 0 1 20 -5 l -2 4 a 10 11 0 0 0 -17 4 z`,fill:`var(${pal.hair})`}));}
+  else add(c,el("path",{d:`M ${ax-16} ${ay-55} a 11 13 0 0 1 22 -3 l -1 5 a 11 11 0 0 0 -20 3 z`,fill:`var(${pal.hair})`}));
+  return c;
+}
+function standingOfficer(g,fx,fy,pal,point){
+  const a=pt(fx,fy,0), ax=a[0],ay=a[1];
+  const c=groupEl(); g.appendChild(c);
+  shadow(g,ax,ay+4,16,7);
+  const P=(dx,dy)=>`${(ax+dx).toFixed(1)} ${(ay+dy).toFixed(1)}`;
+  // legs
+  add(c,el("path",{d:`M ${P(-9,-2)} L ${P(-8,-38)} L ${P(-2,-40)} L ${P(-1,-4)} Z`,fill:"var(--trouser)"}));
+  add(c,el("path",{d:`M ${P(9,-2)} L ${P(8,-38)} L ${P(2,-40)} L ${P(1,-4)} Z`,fill:"var(--uni-r)"}));
+  add(c,el("ellipse",{cx:ax-6,cy:ay-2,rx:7,ry:3.4,fill:"var(--boot)"}));add(c,el("ellipse",{cx:ax+6,cy:ay-2,rx:7,ry:3.4,fill:"var(--boot)"}));
+  // torso
+  add(c,el("path",{d:`M ${P(-12,-38)} L ${P(-15,-64)} Q ${P(-15,-72)} ${P(-7,-74)} L ${P(7,-74)} Q ${P(15,-72)} ${P(15,-64)} L ${P(12,-38)} Z`,fill:`var(${pal.uni})`}));
+  add(c,el("line",{x1:ax,y1:ay-40,x2:ax,y2:ay-70,stroke:"var(--uni-r)","stroke-width":2,opacity:.5}));
+  // arms
+  if(point){add(c,el("path",{d:`M ${P(-13,-66)} Q ${P(-24,-54)} ${P(-30,-42)}`,fill:"none",stroke:`var(${pal.uni})`,"stroke-width":9,"stroke-linecap":"round"}));
+    add(c,el("ellipse",{cx:ax-30,cy:ay-42,rx:4,ry:4,fill:`var(${pal.skin})`}));
+    add(c,el("path",{d:`M ${P(13,-66)} Q ${P(18,-56)} ${P(12,-46)}`,fill:"none",stroke:"var(--uni-l)","stroke-width":9,"stroke-linecap":"round"}));}
+  else {add(c,el("path",{d:`M ${P(-13,-66)} Q ${P(-18,-54)} ${P(-14,-44)}`,fill:"none",stroke:`var(${pal.uni})`,"stroke-width":9,"stroke-linecap":"round"}));
+    add(c,el("path",{d:`M ${P(13,-66)} Q ${P(10,-54)} ${P(6,-46)}`,fill:"none",stroke:"var(--uni-l)","stroke-width":9,"stroke-linecap":"round"}));}
+  // head
+  add(c,el("path",{d:`M ${P(-4,-74)} l 8 0 l 0 -5 l -8 0 z`,fill:`var(${pal.skin})`}));
+  add(c,el("ellipse",{cx:ax,cy:ay-86,rx:9.5,ry:11.5,fill:`var(${pal.skin})`}));
+  if(pal.bun){add(c,el("ellipse",{cx:ax,cy:ay-94,rx:5.5,ry:5.5,fill:`var(${pal.hair})`}));
+    add(c,el("path",{d:`M ${ax-9} ${ay-88} a 9.5 11 0 0 1 19 0 l 0 -3 a 9.5 9 0 0 0 -19 0 z`,fill:`var(${pal.hair})`}));}
+  else add(c,el("path",{d:`M ${ax-10} ${ay-86} a 9.5 11 0 0 1 20 0 l 0 -4 a 9.5 9 0 0 0 -20 0 z`,fill:`var(${pal.hair})`}));
+  return c;
+}
+/* ergonomic office chair: base with 5 castors, post, seat, contoured back, armrests */
+function chair(g,cx,cy){
+  const c0=pt(cx+0.4,cy+0.4,0.06);
+  shadow(g,c0[0],c0[1]+8,26,12);
+  for(let i=0;i<5;i++){const ang=i*72*Math.PI/180+0.3;const ex=cx+0.4+Math.cos(ang)*0.5, ey=cy+0.4+Math.sin(ang)*0.5;
+    const a=pt(cx+0.4,cy+0.4,0.06), b=pt(ex,ey,0.03);
+    add(g,el("line",{x1:a[0],y1:a[1],x2:b[0],y2:b[1],stroke:"var(--metal-d)","stroke-width":4,"stroke-linecap":"round"}));
+    add(g,el("ellipse",{cx:b[0],cy:b[1]+2,rx:4,ry:3,class:"dark r"}));}
+  prism(g,cx+0.35,cy+0.35,0.06,0.1,0.1,0.4,"metaldf");
+  prism(g,cx+0.08,cy+0.08,0.46,0.64,0.64,0.14,"navy");           // seat
+  // armrests
+  prism(g,cx+0.02,cy+0.1,0.6,0.06,0.5,0.06,"navy"); prism(g,cx+0.66,cy+0.1,0.6,0.06,0.5,0.06,"navy");
+  // contoured back on +x side (behind the seated person)
+  const bx=cx+0.6;
+  prism(g,bx,cy+0.08,0.6,0.1,0.64,0.82,"navy");
+  // headrest cap
+  const cap=[pt(bx,cy+0.14,1.42),pt(bx+0.1,cy+0.14,1.42),pt(bx+0.1,cy+0.58,1.42),pt(bx,cy+0.58,1.42)];
+}
+
+/* ---------- people ---------- */
+const PEOPLE=[
+ {id:"mil-j2-lead",name:"INTELLIGENCE LEAD",team:"COMMAND",role:"Department lead",state:"working",model:"Opus",cost:"$0.48",upd:"just now",
+  task:"Combining the four sub-team pieces into one intelligence estimate for sign-off.",read:["library/military/requirements-traceability.md","3 sub-team pieces in out/"],
+  tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
+ {id:"mil-allsource",name:"ALL-SOURCE ANALYST",team:"ALL-SOURCE INTEL (J2)",role:"Fuses reporting into assessments",state:"working",model:"Sonnet",cost:"$0.12",upd:"40s ago",
+  task:"Fusing the supplied reporting into an assessment with confidence levels and stated gaps.",read:["job/inbox/reporting-pack.md","library/shared/house-style.md"],
+  tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
+ {id:"mil-threat",name:"THREAT ANALYST",team:"ALL-SOURCE INTEL (J2)",role:"Adversary capability and doctrine",state:"working",model:"Sonnet",cost:"$0.09",upd:"1 min ago",
+  task:"Drafting likely courses of action from the supplied and open-source material.",read:["job/inbox/reporting-pack.md"],
+  tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
+ {id:"mil-ci",name:"COUNTER-INTEL & SECURITY",team:"ALL-SOURCE INTEL (J2)",role:"Protective security and OPSEC",state:"refused",model:"Sonnet",cost:"$0.04",upd:"5 min ago",
+  task:"Stopped: asked to fetch a page from the web, which this office does not allow.",note:"Refused and logged. No shell, no web access was granted for this job.",read:["library/shared/glossary.md"],
+  tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
+ {id:"mil-osint",name:"OSINT ANALYST",team:"ISR & RECCE",role:"Open-source intelligence",state:"waiting",model:"Sonnet",cost:"$0.07",upd:"2 min ago",
+  task:"Needs your OK to treat a public datasheet as the source for the supplier spec.",note:"Waiting on you — the job is paused at this step until you decide.",read:["library/military/data-logger-overview.md"],
+  tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"ask",Connectors:"off"}},
+ {id:"mil-sigint",name:"SIGINT ANALYST",team:"TECHNICAL INTEL",role:"Signals intelligence analysis",state:"idle",model:"Sonnet",cost:"$0.00",upd:"18 min ago",
+  task:"Idle — no piece assigned on the current job.",read:[],tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
+ {id:"mil-imagery",name:"IMAGERY/GEOINT ANALYST",team:"ISR & RECCE",role:"Interprets supplied imagery",state:"working",model:"Sonnet",cost:"$0.15",upd:"just now",
+  task:"At the map table, marking the route and change-points on the briefing map.",read:["job/inbox/imagery/","library/military/data-logger-overview.md"],
+  tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
+ {id:"mil-geo",name:"GEOSPATIAL ANALYST",team:"GEOSPATIAL & METOC",role:"Terrain and mapping",state:"working",model:"Sonnet",cost:"$0.10",upd:"30s ago",
+  task:"At the map table, writing the terrain analysis (going, cover, key terrain, routes).",read:["library/military/data-logger-overview.md"],
+  tools:{Read:"on",Write:"on",Edit:"on",Bash:"off",WebFetch:"off",Connectors:"off"}},
 ];
-
-/* ---- isometric helpers ---- */
-const TW=36, TH=18, TZ=23;              // half-tile width, half-tile height, height unit
-const SVGNS="http://www.w3.org/2000/svg";
-function P(gx,gy,z){ return [ (gx-gy)*TW, (gx+gy)*TH - z*TZ ]; }
-function poly(pts,cls){ const p=document.createElementNS(SVGNS,"polygon");
-  p.setAttribute("points",pts.map(a=>a.join(",")).join(" ")); if(cls)p.setAttribute("class",cls); return p; }
-/* a shaded box from (gx,gy) size w×d, base z0 height h; returns a <g> with 3 faces */
-function box(gx,gy,w,d,z0,h,cls){
-  const g=document.createElementNS(SVGNS,"g");
-  const A=P(gx,gy,z0+h),B=P(gx+w,gy,z0+h),C=P(gx+w,gy+d,z0+h),D=P(gx,gy+d,z0+h);
-  const Br=P(gx+w,gy,z0),Cr=P(gx+w,gy+d,z0),Dr=P(gx,gy+d,z0);
-  g.appendChild(poly([B,Br,Cr,C],cls+" right"));
-  g.appendChild(poly([D,Dr,Cr,C],cls+" left"));
-  g.appendChild(poly([A,B,C,D],cls+" top"));
-  return g;
-}
-function ell(gx,gy,rx,ry,cls){ const [x,y]=P(gx,gy,0); const e=document.createElementNS(SVGNS,"ellipse");
-  e.setAttribute("cx",x);e.setAttribute("cy",y);e.setAttribute("rx",rx);e.setAttribute("ry",ry);
-  if(cls)e.setAttribute("class",cls); return e; }
-function add(parent,el){parent.appendChild(el);return el;}
-
-const scene=document.getElementById("scene");
-const SHIRT={navy:"#3C4E66",red:"#C0584A",teal:"#2E8B8B",grey:"#8A94A1"};
-
-/* desk + chair + monitor + seated person; returns the station <g> */
-function workstation(px,py,person,big){
-  const g=document.createElementNS(SVGNS,"g");
-  g.setAttribute("class","station"); g.setAttribute("tabindex","0");
-  g.setAttribute("role","button");
-  g.setAttribute("aria-label",person.name+", "+person.state);
-  g.dataset.id=person.id;
-  // contact shadow
-  add(g,ell(px+1.0,py+1.1,big?62:52,big?26:22,"contact"));
-  // desk
-  const dw=big?2.4:2.0, dd=1.25;
-  add(g,box(px,py,dw,dd,0,0.86,"wood"));
-  if(big){ add(g,box(px+dw-0.02,py+0.1,0.9,1.1,0,0.86,"wood")); } // L-return
-  // monitor (back edge of desk, facing the seat)
-  const mx=px+(big?0.7:0.5), my=py+0.12;
-  add(g,box(mx+0.42,my+0.2,0.08,0.02,0.86,0.34,"grey"));      // stand pole
-  add(g,ell(mx+0.46,my+0.24,10,5,"base"));                    // stand foot
-  const mon=box(mx,my,0.95,0.07,1.18,0.62,"screenbox"); add(g,mon);
-  // screen face (front, facing +gy/down-left) with content lines + status glow
-  const s0=P(mx,my+0.07,1.74), s1=P(mx+0.95,my+0.07,1.74), s2=P(mx+0.95,my+0.07,1.22), s3=P(mx,my+0.07,1.22);
-  add(g,poly([s0,s1,s2,s3],"screenface"));
-  for(let i=0;i<3;i++){ const t=0.18+i*0.26;
-    const a=P(mx+0.12,my+0.07,1.62-i*0.17), b=P(mx+(i===2?0.55:0.82),my+0.07,1.62-i*0.17);
-    const ln=document.createElementNS(SVGNS,"line");
-    ln.setAttribute("x1",a[0]);ln.setAttribute("y1",a[1]);ln.setAttribute("x2",b[0]);ln.setAttribute("y2",b[1]);
-    ln.setAttribute("class","sline"); add(g,ln);
-  }
-  // status glow bar on screen
-  const q0=P(mx+0.12,my+0.07,1.32),q1=P(mx+0.5,my+0.07,1.32),q2=P(mx+0.5,my+0.07,1.26),q3=P(mx+0.12,my+0.07,1.26);
-  add(g,poly([q0,q1,q2,q3],"st-"+person.state));
-  // keyboard
-  add(g,box(px+(big?0.65:0.45),py+0.78,0.9,0.32,0.86,0.03,"grey"));
-  // chair (near side) : seat, back, head
-  const cx=px+(big?0.95:0.75), cy=py+1.35;
-  add(g,box(cx,cy,0.7,0.6,0,0.42,"navy"));                    // seat
-  add(g,box(cx+0.04,cy+0.5,0.62,0.12,0.42,0.72,"navy"));      // back
-  const seat=SHIRT[person.shirt]||SHIRT.navy;
-  const sh=box(cx+0.12,cy+0.38,0.46,0.14,0.42,0.5,"shirt"); // shoulders
-  sh.querySelectorAll("polygon").forEach(p=>{p.style.fill=seat; if(p.classList.contains("right"))p.style.filter="brightness(.9)"; if(p.classList.contains("left"))p.style.filter="brightness(.8)";});
-  add(g,sh);
-  const hc=P(cx+0.35,cy+0.5,0.98); // head center
-  const head=document.createElementNS(SVGNS,"ellipse");
-  head.setAttribute("cx",hc[0]);head.setAttribute("cy",hc[1]);head.setAttribute("rx",11);head.setAttribute("ry",13);
-  head.setAttribute("class","head"); add(g,head);
-  const hair=document.createElementNS(SVGNS,"path");
-  hair.setAttribute("d",`M ${hc[0]-11} ${hc[1]-1} a 11 13 0 0 1 22 0 l 0 -3 a 11 10 0 0 0 -22 0 z`);
-  hair.setAttribute("class","hair"); add(g,hair);
-  // selection ring on floor (shown on hover / when selected)
-  add(g,ell(px+1.0,py+1.1,big?64:54,big?28:24,"selbox"));
-  // small status dot on floor by the desk
-  const d=ell(px+(big?2.1:1.8),py+0.2,7,3.5,"st-"+person.state); d.classList.add("ring"); d.style.opacity=1; add(g,d);
-  return g;
-}
-
-/* floor sub-team label */
-function label(px,py,text){
-  const [x,y]=P(px,py,0); const t=document.createElementNS(SVGNS,"text");
-  t.setAttribute("x",x);t.setAttribute("y",y);t.setAttribute("class","floorlabel");
-  t.setAttribute("text-anchor","middle");t.textContent=text; return t;
-}
-
-/* bookshelf (the library) */
-function bookshelf(px,py){
-  const g=document.createElementNS(SVGNS,"g");
-  add(g,ell(px+0.8,py+0.5,54,22,"contact"));
-  add(g,box(px,py,1.6,0.5,0,1.9,"wood"));
-  // books on two shelves (front-left face)
-  const cols=["--book1","--book2","--book3","--book4"];
-  for(let s=0;s<2;s++) for(let i=0;i<5;i++){
-    const bx=px+0.12+i*0.28;
-    const b=box(bx,py+0.5,0.2,0.02,0.25+s*0.75,0.5,"shelfbook");
-    const c=cols[(i+s)%cols.length];
-    b.querySelectorAll("polygon").forEach(p=>p.style.fill=`var(${c})`);
-    add(g,b);
-  }
-  return g;
-}
-/* plant */
-function plant(px,py){
-  const g=document.createElementNS(SVGNS,"g");
-  add(g,ell(px+0.2,py+0.2,16,7,"contact"));
-  add(g,box(px,py,0.34,0.34,0,0.3,"potbox"));
-  g.lastChild.querySelectorAll("polygon").forEach(p=>p.style.fill="var(--pot)");
-  const [cx,cy]=P(px+0.17,py+0.17,0.3);
-  for(const [dx,dy,r] of [[0,-20,13],[-11,-10,10],[11,-11,10],[-5,-26,9],[7,-24,9]]){
-    const e=document.createElementNS(SVGNS,"ellipse");
-    e.setAttribute("cx",cx+dx);e.setAttribute("cy",cy+dy);e.setAttribute("rx",r);e.setAttribute("ry",r*1.25);
-    e.style.fill=(dx+dy)%2?"var(--plant)":"var(--plant-d)"; add(g,e);
-  }
-  return g;
-}
-
-/* ---- build the scene, grouped by sub-team ---- */
-const layer=document.createElementNS(SVGNS,"g");
-// back-left wall bookshelf = library
-layer.appendChild(bookshelf(-0.6,-1.4));
-layer.appendChild(plant(2.1,-1.5));
-
-// positions (grid). Lead gets the big L-desk front-right.
-const slots=[
-  ["mil-allsource",0.4,0.6,false],
-  ["mil-threat",2.9,0.6,false],
-  ["mil-ci",0.4,2.9,false],
-  ["mil-sigint",5.2,0.6,false],
-  ["mil-osint",5.2,2.9,false],
-  ["mil-imagery",7.6,0.6,false],
-  ["mil-j2-lead",8.0,3.1,true],
-];
-layer.appendChild(plant(7.8,2.6));
 const byId=Object.fromEntries(PEOPLE.map(p=>[p.id,p]));
-// draw far-to-near so nearer desks overlap correctly
-slots.sort((a,b)=>(a[1]+a[2])-(b[1]+b[2]));
-for(const [id,gx,gy,big] of slots){ layer.appendChild(workstation(gx,gy,byId[id],big)); }
-// sub-team labels, drawn last on open floor so they stay legible
-layer.appendChild(label(0.1,4.7,"ALL-SOURCE (J2)"));
-layer.appendChild(label(5.2,4.9,"TECHNICAL · ISR"));
-scene.appendChild(layer);
+const PAL=[
+ {uni:"--uni-t",skin:"--skin1",hair:"--hair1"},
+ {uni:"--uni-t",skin:"--skin2",hair:"--hair2",bun:true},
+ {uni:"--uni-l",skin:"--skin1",hair:"--hair2"},
+];
 
-// compute viewBox from content bounds
-const bb=layer.getBBox();
-const pad=28;
+/* ---------- build the scene ---------- */
+const scene=document.getElementById("scene");
+const defs=el("defs"); const fil=el("filter",{id:"soft",x:"-50%",y:"-50%",width:"200%",height:"200%"});
+fil.appendChild(el("feGaussianBlur",{in:"SourceGraphic",stdDeviation:"3.5"})); defs.appendChild(fil); scene.appendChild(defs);
+const world=groupEl(); scene.appendChild(world);
+
+const jobs=[]; // {depth, g}
+function push(depth,g){jobs.push({depth,g});}
+function station(id,builder){const g=groupEl();g.setAttribute("class","station");g.setAttribute("tabindex","0");
+  g.setAttribute("role","button");const p=byId[id];g.setAttribute("aria-label",p.name+", "+p.state);g.dataset.id=id;builder(g,p);return g;}
+
+/* a full workstation (desk+props+chair+officer), person faces -x */
+function workstation(id,x,y,opts={}){
+  const p=byId[id], pal=PAL[opts.pal||0];
+  const g=station(id,(g)=>{
+    const du=deskUnit(x,y,{L:opts.L});g.appendChild(du.g);
+    monitor(g,x+0.12,y+0.2,0.84,opts.kind||"map",p.state);
+    if(opts.L) monitor(g,x+0.12+1.0,y+0.25,0.84,"doc",p.state);   // second screen for the lead
+    keyboard(g,x+1.0,y+0.55,0.84);
+    if(opts.lamp!==false && !opts.L) lamp(g,x+0.4,y+0.28,0.84);
+    binders(g,x+0.35,y+1.12,0.84);
+    chair(g,x+2.1,y+0.45);
+    seatedOfficer(g,x+2.35,y+0.75,pal);
+    // selection ring + floor status dot
+    add(g,el("ellipse",{cx:pt(x+1.3,y+0.9,0)[0],cy:pt(x+1.3,y+0.9,0)[1]+8,rx:opts.L?64:54,ry:opts.L?30:26,class:"selbox"}));
+    const sd=pt(x+0.1,y+0.1,0);add(g,el("ellipse",{cx:sd[0],cy:sd[1],rx:7,ry:3.4,class:"st-"+p.state}));
+  });
+  push(x+y, g);
+}
+
+/* furniture (non-clickable) */
+function furn(depth,fn){const g=groupEl();fn(g);push(depth,g);}
+
+/* --- compose the Intelligence room --- */
+// back wall furniture
+furn(-10.5,g=>filing(g,-8.8,-2.4,true));
+furn(-7.6, g=>projector(g,-0.9,-5.6));
+furn(-7.8, g=>bookshelf(g,5.4,-4.6));
+furn(-6.0, g=>serverRack(g,8.7,-4.2));
+furn(-2.0, g=>filing(g,9.3,-1.4,false));
+// map table + two standing officers
+furn(-5.0, g=>mapTable(g,0.4,-3.6));
+push(-2.6, station("mil-geo",(g,p)=>{ standingOfficer(g,0.9,-2.9,PAL[0],true);
+  add(g,el("ellipse",{cx:pt(0.9,-2.9,0)[0],cy:pt(0.9,-2.9,0)[1]+6,rx:40,ry:18,class:"selbox"}));
+  const sd=pt(0.5,-3.3,0);add(g,el("ellipse",{cx:sd[0],cy:sd[1],rx:7,ry:3.4,class:"st-"+p.state}));}));
+push(-2.2, station("mil-imagery",(g,p)=>{ standingOfficer(g,2.8,-2.5,PAL[1],true);
+  add(g,el("ellipse",{cx:pt(2.8,-2.5,0)[0],cy:pt(2.8,-2.5,0)[1]+6,rx:40,ry:18,class:"selbox"}));
+  const sd=pt(2.4,-2.9,0);add(g,el("ellipse",{cx:sd[0],cy:sd[1],rx:7,ry:3.4,class:"st-"+p.state}));}));
+// plants
+furn(-2.6, g=>plant(g,-4.9,-1.4,1));
+furn(1.9,  g=>plant(g,1.0,1.1,0.9));
+furn(-0.8, g=>plant(g,4.2,-0.7,1));
+furn(4.8,  g=>plant(g,3.0,3.8,1.05));
+// back desk row
+workstation("mil-allsource",-7.0,0.2,{pal:0,kind:"map"});
+workstation("mil-threat",-3.4,0.2,{pal:1,kind:"map"});
+furn(-1.6, g=>divider(g,-1.1,0.2,1.5));
+// front desk row
+workstation("mil-ci",-5.2,3.6,{pal:2,kind:"doc"});
+workstation("mil-sigint",-1.6,3.6,{pal:0,kind:"doc"});
+furn(2.2, g=>divider(g,0.7,3.6,1.5));
+workstation("mil-osint",2.4,2.4,{pal:1,kind:"map"});
+// the lead's L-desk (right), dual monitors
+workstation("mil-j2-lead",6.0,0.4,{pal:0,kind:"dual1",L:true});
+
+// paint back-to-front
+jobs.sort((a,b)=>a.depth-b.depth).forEach(j=>world.appendChild(j.g));
+const bb=world.getBBox(); const pad=30;
 scene.setAttribute("viewBox",`${bb.x-pad} ${bb.y-pad} ${bb.width+pad*2} ${bb.height+pad*2}`);
 scene.setAttribute("preserveAspectRatio","xMidYMid meet");
 
-/* ---- selection + status card ---- */
-const card=document.getElementById("card"), empty=document.getElementById("empty");
-const $=id=>document.getElementById(id);
-let selected=null;
-function select(id){
-  const p=byId[id]; if(!p) return;
-  if(selected) selected.classList.remove("sel");
-  const g=scene.querySelector(`.station[data-id="${id}"]`);
-  g.classList.add("sel"); selected=g;
-  // raise selected to front
-  g.parentNode.appendChild(g);
+/* ---------- status card ---------- */
+const $=id=>document.getElementById(id), card=$("card"), empty=$("empty");
+let sel=null;
+function select(id){const p=byId[id];if(!p)return;
+  if(sel)sel.classList.remove("sel");
+  const g=scene.querySelector(`.station[data-id="${id}"]`);g.classList.add("sel");sel=g;g.parentNode.appendChild(g);
   const nice={working:"Working",waiting:"Waiting for you",refused:"Refused / stopped",idle:"Idle"}[p.state];
-  $("p-pill").className="pill "+p.state; $("p-state").textContent=nice;
-  $("p-team").textContent=p.team; $("p-team2").textContent=p.team;
-  $("p-name").textContent=p.name; $("p-role").textContent=p.role;
-  $("p-task").textContent=p.task; $("p-model").textContent=p.model;
-  $("p-cost").textContent=p.cost; $("p-upd").textContent=p.upd;
-  const rl=$("p-read"); rl.innerHTML="";
-  if(p.read.length){ $("p-readwrap").hidden=false; for(const r of p.read){const li=document.createElement("li");li.textContent=r;rl.appendChild(li);} }
-  else $("p-readwrap").hidden=true;
-  const tw=$("p-tools"); tw.innerHTML="";
-  for(const [t,v] of Object.entries(p.tools)){ const c=document.createElement("span");
-    c.className="chip"+(v==="off"?" off":v==="ask"?" ask":""); c.textContent=t+(v==="ask"?" · ask":""); tw.appendChild(c); }
-  const note=$("p-note"); if(p.note){note.hidden=false;note.textContent=p.note;} else note.hidden=true;
+  $("p-pill").className="pill "+p.state;$("p-state").textContent=nice;
+  $("p-team").textContent=p.team;$("p-team2").textContent=p.team;$("p-name").textContent=p.name;$("p-role").textContent=p.role;
+  $("p-task").textContent=p.task;$("p-model").textContent=p.model;$("p-cost").textContent=p.cost;$("p-upd").textContent=p.upd;
+  const rl=$("p-read");rl.innerHTML="";if(p.read.length){$("p-readwrap").hidden=false;for(const r of p.read){const li=document.createElement("li");li.textContent=r;rl.appendChild(li);}}else $("p-readwrap").hidden=true;
+  const tw=$("p-tools");tw.innerHTML="";for(const[t,v]of Object.entries(p.tools)){const c=document.createElement("span");c.className="chip"+(v==="off"?" off":v==="ask"?" ask":"");c.textContent=t+(v==="ask"?" · ask":"");tw.appendChild(c);}
+  const note=$("p-note");if(p.note){note.hidden=false;note.textContent=p.note;}else note.hidden=true;
   $("p-foot").textContent="No shell · no network · work stays in the job folder";
-  empty.hidden=true; card.hidden=false;
-}
-function deselect(){ if(selected)selected.classList.remove("sel"); selected=null; card.hidden=true; empty.hidden=false; }
-scene.addEventListener("click",e=>{ const g=e.target.closest(".station"); if(g)select(g.dataset.id); else deselect(); });
-scene.addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ")){const g=e.target.closest(".station"); if(g){e.preventDefault();select(g.dataset.id);}} });
+  empty.hidden=true;card.hidden=false;}
+function deselect(){if(sel)sel.classList.remove("sel");sel=null;card.hidden=true;empty.hidden=false;}
+scene.addEventListener("click",e=>{const g=e.target.closest(".station");g?select(g.dataset.id):deselect();});
+scene.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){const g=e.target.closest(".station");if(g){e.preventDefault();select(g.dataset.id);}}});
 $("close").addEventListener("click",deselect);
-document.addEventListener("keydown",e=>{ if(e.key==="Escape")deselect(); });
-// open with the lead selected so the first frame shows the interaction
+document.addEventListener("keydown",e=>{if(e.key==="Escape")deselect();});
 select("mil-j2-lead");
 
-/* theme toggle (per-viewer convenience) */
-const root=document.documentElement, tbtn=$("theme");
-try{ const s=localStorage.getItem("eo-theme"); if(s)root.setAttribute("data-theme",s);}catch{}
-tbtn.addEventListener("click",()=>{
-  const cur=root.getAttribute("data-theme");
-  const dark=cur?cur==="dark":matchMedia("(prefers-color-scheme:dark)").matches;
-  const next=dark?"light":"dark"; root.setAttribute("data-theme",next);
-  try{localStorage.setItem("eo-theme",next);}catch{}
-});
+const root=document.documentElement,tb=$("theme");
+try{const s=localStorage.getItem("eo-theme");if(s)root.setAttribute("data-theme",s);}catch{}
+tb.addEventListener("click",()=>{const cur=root.getAttribute("data-theme");
+  const dark=cur?cur==="dark":matchMedia("(prefers-color-scheme:dark)").matches;const next=dark?"light":"dark";
+  root.setAttribute("data-theme",next);try{localStorage.setItem("eo-theme",next);}catch{}});
 </script>
