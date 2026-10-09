@@ -3,6 +3,7 @@
   "key": "business",
   "name": "BUSINESS",
   "about": "Owns the running of the company: money, contracts, purchasing and office administration.",
+  "group": "Business",
   "color": "#5B8DEF",
   "lead": "biz-lead",
   "teams": [

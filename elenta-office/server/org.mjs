@@ -11,7 +11,7 @@ export const PALETTE = ['#C9A227', '#5B8DEF', '#3FB68B', '#D9738F', '#9B7FE6', '
 const KEY_RE = /^[a-z][a-z0-9-]{0,23}$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,47}$/;
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
-const LIMITS = { departments: 12, perDept: 120, total: 350, rules: 12, rule: 240, name: 32, role: 80, does: 400, about: 400, title: 60 };
+const LIMITS = { departments: 12, perDept: 120, total: 350, rules: 12, rule: 240, group: 32, name: 32, role: 80, does: 400, about: 400, title: 60 };
 
 function str(v) { return typeof v === 'string' ? v.trim() : ''; }
 
@@ -79,6 +79,11 @@ export function validateOrg(raw, { deptSettings = {} } = {}) {
     if (name.length > LIMITS.name) problems.push(`${dw} name is longer than ${LIMITS.name} characters.`);
     const about = str(d.about);
     if (about.length > LIMITS.about) problems.push(`${dw} "about" is longer than ${LIMITS.about} characters.`);
+    let group = '';
+    if (d.group !== undefined) {
+      group = str(d.group);
+      if (group.length > LIMITS.group) problems.push(`${dw} "group" is longer than ${LIMITS.group} characters.`);
+    }
     const rules = [];
     if (d.rules !== undefined) {
       if (!Array.isArray(d.rules) || d.rules.some((r) => typeof r !== 'string' || !r.trim())) problems.push(`${dw} "rules" must be a list of sentences.`);
@@ -113,7 +118,7 @@ export function validateOrg(raw, { deptSettings = {} } = {}) {
     });
     const count = total - before;
     if (count > LIMITS.perDept) problems.push(`${dw} has ${count} people; the most allowed is ${LIMITS.perDept}.`);
-    departments.push({ key, name, about, rules, boss, color, on: true, lead, teams });
+    departments.push({ key, name, about, group, rules, boss, color, on: true, lead, teams });
   });
 
   if (bosses > 1) problems.push(`Only one department may be the boss; ${bosses} are marked "boss": true.`);

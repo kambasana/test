@@ -1,0 +1,34 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.cyber",
+  "name": "Elenta Cyber, Ew & Space",
+  "version": "0.1.0",
+  "description": "Defensive cyber and authorised adversary emulation, communications and information systems, electronic warfare and spectrum, and space support — defence only.",
+  "keywords": [
+    "elenta",
+    "department",
+    "cyber",
+    "military"
+  ],
+  "personas": [
+    "agents/mil-j6-lead.persona.md",
+    "agents/mil-cyber.persona.md",
+    "agents/mil-redcyber.persona.md",
+    "agents/mil-cis.persona.md",
+    "agents/mil-ea.persona.md",
+    "agents/mil-ep.persona.md",
+    "agents/mil-es.persona.md",
+    "agents/mil-spectrum.persona.md",
+    "agents/mil-space.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

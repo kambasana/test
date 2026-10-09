@@ -117,7 +117,7 @@ export function createOfficeServer(ctx) {
     return {
       office: { name: org?.title || PRODUCT_NAME, product: PRODUCT_NAME, wing: settings.wing || org?.title || PRODUCT_NAME, wings: settings.wings },
       departments: (org?.departments || []).map((d) => ({
-        key: d.key, name: d.name, about: d.about, boss: d.boss, color: d.color, on: d.on, lead: d.lead,
+        key: d.key, name: d.name, about: d.about, group: d.group, boss: d.boss, color: d.color, on: d.on, lead: d.lead,
         teams: d.teams.map((t) => ({ name: t.name, people: t.people.map((p) => ({ id: p.id, name: p.name, role: p.role, does: p.does })) })),
       })),
       layout: org ? computeLayout(org.departments) : null,

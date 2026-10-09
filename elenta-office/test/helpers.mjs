@@ -32,7 +32,7 @@ export function isolatedEnv(extra = {}) {
  * A stand-in for the ACP runner: answers like a well-behaved agent without calling Claude.
  * Records every call in `calls`.
  */
-export function fakeRunner({ routeTo = 'military', plan = null, failPieces = [], delayMs = 5 } = {}) {
+export function fakeRunner({ routeTo = 'capability', plan = null, failPieces = [], delayMs = 5 } = {}) {
   const calls = [];
   const fn = async (o) => {
     calls.push({ role: o.role, agent: o.agent.id, prompt: o.prompt });

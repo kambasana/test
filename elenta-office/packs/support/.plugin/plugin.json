@@ -1,0 +1,40 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.support",
+  "name": "Elenta Personnel, Med & Legal",
+  "version": "0.1.0",
+  "description": "Personnel and HR, medical and veterinary and chaplaincy, and legal, military police and compliance — all under the law of armed conflict and applicable law.",
+  "keywords": [
+    "elenta",
+    "department",
+    "support",
+    "military"
+  ],
+  "personas": [
+    "agents/mil-support-lead.persona.md",
+    "agents/mil-personnel.persona.md",
+    "agents/mil-hr.persona.md",
+    "agents/mil-medofficer.persona.md",
+    "agents/mil-medic.persona.md",
+    "agents/mil-nurse.persona.md",
+    "agents/mil-flightsurgeon.persona.md",
+    "agents/mil-medplanner.persona.md",
+    "agents/mil-vet.persona.md",
+    "agents/mil-chaplain.persona.md",
+    "agents/mil-legal.persona.md",
+    "agents/mil-mp.persona.md",
+    "agents/mil-cid.persona.md",
+    "agents/mil-export.persona.md",
+    "agents/mil-qa.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

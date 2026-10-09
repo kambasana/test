@@ -28,7 +28,7 @@ function lessonsBlock(lessons) {
 }
 
 export function routePrompt({ request, departments }) {
-  const list = departments.map((d) => ({ key: d.key, name: d.name, about: d.about, teams: d.teams.map((t) => t.name) }));
+  const list = departments.map((d) => ({ key: d.key, name: d.name, ...(d.group ? { group: d.group } : {}), about: d.about, teams: d.teams.map((t) => t.name) }));
   return `A request has come to the Boss. Decide which department owns it.
 
 Departments that can take work:

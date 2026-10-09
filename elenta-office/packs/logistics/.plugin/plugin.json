@@ -1,0 +1,36 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.logistics",
+  "name": "Elenta Logistics & Engineering",
+  "version": "0.1.0",
+  "description": "Sustainment and supply-chain planning, movements and transport, fuels, aerial delivery and field feeding, and engineering and maintenance doctrine.",
+  "keywords": [
+    "elenta",
+    "department",
+    "logistics",
+    "military"
+  ],
+  "personas": [
+    "agents/mil-j4-lead.persona.md",
+    "agents/mil-log-planner.persona.md",
+    "agents/mil-quartermaster.persona.md",
+    "agents/mil-movements.persona.md",
+    "agents/mil-transport.persona.md",
+    "agents/mil-fuels.persona.md",
+    "agents/mil-rigger.persona.md",
+    "agents/mil-feeding.persona.md",
+    "agents/mil-ordnance.persona.md",
+    "agents/mil-avmaint.persona.md",
+    "agents/mil-vehmaint.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

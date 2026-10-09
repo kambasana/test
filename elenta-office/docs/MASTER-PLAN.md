@@ -167,21 +167,30 @@ packs/military/
   requests that need a grant), skills are listed for review, model choices are ignored, paths cannot
   leave the pack. Packs imported from outside start paused behind a "Meet your new team" review.
 
-### 5.3 The Military department (2026-10-09)
+### 5.3 The Military group: eight departments (2026-10-09)
 
-One department, **101 teammates in 28 sub-teams**, covering the staff branches and every technical
-and operational domain as staff and knowledge work: command group · personnel (J1) · all-source and
-technical intelligence (HUMINT/SIGINT/MASINT/DOMEX/biometrics doctrine) · cryptology · ISR & recce
-(GEOINT/imagery, OSINT) · geospatial & METOC · operations (J3) · information operations & PSYOP ·
-civil-military (J9) · cyber defence & adversary emulation (J6) · electronic warfare · space ·
-land / aviation / maritime warfare doctrine · plans (J5) · wargaming & operational research ·
-training & exercises (J7) · capability (J8) · science & technology · software & systems · test &
-evaluation · logistics (J4) · engineering & maintenance · documentation · medical · legal, police
-& compliance.
+Military is a **group of eight departments** (not one giant department), so the Boss routes straight
+to the right one and each is easy to scan and ships as its own Open Plugin Spec pack:
 
-Every one of these is a sandboxed text agent that writes doctrine, training, plans, procedures,
-analysis and EXERCISE simulations — not an operator. The department's rules travel with it (prompts,
-plans and the package) and hold the line: **staff and analysis work only, people decide and act**; no
+| Department | Covers | People |
+|---|---|---|
+| **Intelligence** | all-source & technical intel (HUMINT/SIGINT/MASINT/DOMEX/biometrics doctrine), cryptology, ISR & recce (GEOINT/imagery, OSINT), geospatial & METOC, counter-intel | 18 |
+| **Operations & Plans** | command group, operations (J3), plans (J5, red team), fire-support coordination, wargaming & OR, training & exercises (J7) | 15 |
+| **Information & Civil-Military** | info ops & PSYOP doctrine, public affairs, communication products, civil-military & cultural liaison | 8 |
+| **Cyber, EW & Space** | cyber defence & authorised adversary emulation, CIS, electronic warfare, spectrum, space support | 9 |
+| **Warfare Doctrine** | land, aviation and maritime warfare — doctrine, training and EXERCISE simulations only | 17 |
+| **Logistics & Engineering** | sustainment, supply chain, movements, fuels, aerial delivery, field feeding, engineering & maintenance | 11 |
+| **Capability & Technical** | capability (J8), science & technology, software & systems, test & evaluation, documentation | 15 |
+| **Personnel, Medical & Legal** | personnel (J1), medical/veterinary/chaplaincy, legal, military police, compliance | 15 |
+
+115 people in all. A new optional department field, **`group`**, carries the "Military" label (Business
+is its own group); the floor clusters a group's rooms together and the Boss's routing sees the group.
+Departments in a group **share a notes folder** (`library/military/`) on top of their own, so a split
+department still reads the shared doctrine and templates.
+
+Every teammate is a sandboxed text agent that writes doctrine, training, plans, procedures, analysis
+and EXERCISE simulations — not an operator. Each military department carries the same rules (in its
+prompts, the lead's plan and its package): **staff and analysis work only, people decide and act**; no
 selecting, locating, prioritising or recommending weapon employment against real people, places or
 objects; intel / recon / SIGINT / MASINT / DOMEX only on supplied or open-source material, no
 collection on or biometric identification of private individuals; cyber and adversary-emulation on

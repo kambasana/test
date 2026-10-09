@@ -1,0 +1,43 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.intel",
+  "name": "Elenta Intelligence",
+  "version": "0.1.0",
+  "description": "All-source and technical intelligence, cryptology, ISR and reconnaissance, geospatial and environment — staff analysis from supplied or open-source material only.",
+  "keywords": [
+    "elenta",
+    "department",
+    "intel",
+    "military"
+  ],
+  "personas": [
+    "agents/mil-j2-lead.persona.md",
+    "agents/mil-allsource.persona.md",
+    "agents/mil-threat.persona.md",
+    "agents/mil-ci.persona.md",
+    "agents/mil-sigint.persona.md",
+    "agents/mil-masint.persona.md",
+    "agents/mil-domex.persona.md",
+    "agents/mil-biometrics.persona.md",
+    "agents/mil-humint.persona.md",
+    "agents/mil-cryptology.persona.md",
+    "agents/mil-tscm.persona.md",
+    "agents/mil-linguist.persona.md",
+    "agents/mil-isr-planner.persona.md",
+    "agents/mil-osint.persona.md",
+    "agents/mil-recce-analyst.persona.md",
+    "agents/mil-imagery.persona.md",
+    "agents/mil-geo.persona.md",
+    "agents/mil-metoc.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

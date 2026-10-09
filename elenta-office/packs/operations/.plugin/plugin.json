@@ -1,0 +1,40 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.operations",
+  "name": "Elenta Operations & Plans",
+  "version": "0.1.0",
+  "description": "Current operations, future plans, fire-support coordination doctrine, wargaming and operational research, training and exercises, and the command staff.",
+  "keywords": [
+    "elenta",
+    "department",
+    "operations",
+    "military"
+  ],
+  "personas": [
+    "agents/mil-j3-lead.persona.md",
+    "agents/mil-deputy.persona.md",
+    "agents/mil-staff-officer.persona.md",
+    "agents/mil-ops.persona.md",
+    "agents/mil-watchkeeper.persona.md",
+    "agents/mil-joint-liaison.persona.md",
+    "agents/mil-fires.persona.md",
+    "agents/mil-plans.persona.md",
+    "agents/mil-redteam.persona.md",
+    "agents/mil-wargame.persona.md",
+    "agents/mil-adjudicator.persona.md",
+    "agents/mil-or.persona.md",
+    "agents/mil-exercise.persona.md",
+    "agents/mil-training.persona.md",
+    "agents/mil-lessons.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

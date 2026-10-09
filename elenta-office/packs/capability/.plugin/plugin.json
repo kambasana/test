@@ -1,0 +1,40 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.capability",
+  "name": "Elenta Capability & Technical",
+  "version": "0.1.0",
+  "description": "Capability development, defence science and systems analysis, software and systems engineering, test and evaluation, and documentation.",
+  "keywords": [
+    "elenta",
+    "department",
+    "capability",
+    "military"
+  ],
+  "personas": [
+    "agents/mil-cap-lead.persona.md",
+    "agents/mil-capability.persona.md",
+    "agents/mil-req-analyst.persona.md",
+    "agents/mil-cost.persona.md",
+    "agents/mil-sys-analyst.persona.md",
+    "agents/mil-scientist.persona.md",
+    "agents/mil-human-factors.persona.md",
+    "agents/mil-sw-engineer.persona.md",
+    "agents/mil-firmware.persona.md",
+    "agents/mil-integration.persona.md",
+    "agents/mil-test-engineer.persona.md",
+    "agents/mil-tande.persona.md",
+    "agents/mil-safety.persona.md",
+    "agents/mil-writer.persona.md",
+    "agents/mil-config.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

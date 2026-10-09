@@ -2,6 +2,7 @@
 import { readdirSync, readFileSync, statSync, lstatSync, mkdirSync, copyFileSync, existsSync, appendFileSync, watch } from 'node:fs';
 import { join, relative, sep, posix, dirname } from 'node:path';
 import { containedPath } from './paths.mjs';
+import { slugify } from './util.mjs';
 import { isoDay } from './util.mjs';
 
 const MAX_NOTE_BYTES = 256 * 1024;
@@ -43,10 +44,14 @@ export function buildIndex(root) {
   return entries;
 }
 
-/** Which index entries a department may read: shared notes, its own folder, its own lessons. */
-export function notesForDept(index, deptKey) {
-  return index.filter((e) =>
-    e.folder === '' || e.folder === 'shared' || e.folder === deptKey || e.path === `lessons/${deptKey}.md`);
+/** Which index entries a department may read: shared notes, its own folder, its group's folder, its own lessons.
+ * `dept` may be a key string or a department object `{ key, group }`. */
+export function notesForDept(index, dept) {
+  const key = typeof dept === 'string' ? dept : dept.key;
+  const folders = new Set(['', 'shared', key]);
+  const group = typeof dept === 'object' && dept.group ? slugify(dept.group, 24) : '';
+  if (group) folders.add(group);
+  return index.filter((e) => folders.has(e.folder) || e.path === `lessons/${key}.md`);
 }
 
 export class Library {
@@ -104,8 +109,8 @@ export class Library {
   }
 
   /** Copy the notes a department may read into `<workspace>/library/`. Returns the copied entries. */
-  copyForDept(deptKey, workspace) {
-    const allowed = notesForDept(this.rebuild(), deptKey);
+  copyForDept(dept, workspace) {
+    const allowed = notesForDept(this.rebuild(), dept);
     const dest = join(workspace, 'library');
     mkdirSync(dest, { recursive: true });
     for (const e of allowed) {

@@ -51,6 +51,9 @@ Rules (validate at start; report problems as sentences; never half-apply):
 - At most one `boss: true`. 1–12 departments, max 60 people a department, 200 in all.
 - `rules` optional: up to 12 sentences (max 240 chars each). They go into every worker's prompt and
   the lead's plan for that department, and override anything a request asks.
+- `group` optional (max 32 chars): a label several departments share (e.g. "Military"). The floor
+  clusters a group's rooms, the Boss's routing sees it, and departments in a group also read the
+  group's library folder (`library/<group-slug>/`).
 - A department may instead be `{ "pack": "<folder>" }`: a department package (§11), resolved
   relative to the org file.
 - `id` optional (made from department key + name), unique across the org.
@@ -60,10 +63,10 @@ Rules (validate at start; report problems as sentences; never half-apply):
   `EO_OFF=a,b`. Off = not on the floor (an outline remains), takes no jobs, the Boss never routes to
   it, the server refuses jobs for it. At least one department stays on.
 
-Ship `orgs/elenta.json` (Boss · Military — 101 people in 28 sub-teams covering the staff branches
-J1–J9, the full intelligence/recon/cryptology disciplines, info ops, cyber, EW, space, land/air/sea
-doctrine, logistics, wargaming, medical and legal, all as staff/knowledge work under its rules ·
-Business with Finance, Contracts, Admin) as a draft.
+Ship `orgs/elenta.json` as a draft: Boss, a **Military group of eight departments** (Intelligence ·
+Operations & Plans · Information & Civil-Military · Cyber, EW & Space · Warfare Doctrine · Logistics &
+Engineering · Capability & Technical · Personnel, Medical & Legal — 115 people, all staff/knowledge
+work under shared rules) and Business (Finance, Contracts, Admin).
 
 ## 3. The library
 

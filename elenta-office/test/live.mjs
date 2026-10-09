@@ -73,7 +73,8 @@ try {
   assert.equal(job.state, 'waiting_approval', `job ended ${job.state}: ${job.error}`);
 
   // Routing
-  assert.equal(job.dept, 'military', 'the Boss should route to MILITARY');
+  const orgInfo = (await api('/api/org')).departments ? await api('/api/org') : { departments: [] };
+  assert.ok(orgInfo.departments.find((d) => d.key === job.dept)?.group === 'Military', `the Boss should route to a Military-group department, got ${job.dept}`);
   assert.ok(job.routedBy && job.routedBy.why, 'routedBy is recorded');
   log(`routed to ${job.dept}: ${job.routedBy.why}`);
 

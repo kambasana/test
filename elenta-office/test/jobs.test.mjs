@@ -47,7 +47,7 @@ test('a Boss job is routed, planned by sub-team, worked in parallel, combined an
   assert.equal(created.body.mode, 'team');
   const job = await waitState(created.body.id, ['waiting_approval', 'failed']);
   assert.equal(job.state, 'waiting_approval', job.error);
-  assert.equal(job.dept, 'military');
+  assert.equal(job.dept, 'capability');
   assert.equal(job.routedBy.by, 'boss');
   assert.ok(job.routedBy.why.length > 0);
   assert.equal(job.pieces.length, 3);
@@ -85,7 +85,7 @@ test('a Boss job is routed, planned by sub-team, worked in parallel, combined an
 
 test('files API serves only from out/ or the deliverables folder', async (t) => {
   const { o, api, waitState } = await office(t);
-  const { body } = await api('/api/jobs', { dept: 'military', text: 'Review the code.', mode: 'team' });
+  const { body } = await api('/api/jobs', { dept: 'capability', text: 'Review the code.', mode: 'team' });
   await waitState(body.id, ['waiting_approval']);
   const base = `http://127.0.0.1:${o.port}`;
   const ok = await fetch(`${base}/api/files?job=${body.id}&path=deliverable.md`);
@@ -100,11 +100,11 @@ test('files API serves only from out/ or the deliverables folder', async (t) => 
 test('reject with a note writes a lesson that later jobs for that department receive; revise re-runs', async (t) => {
   const runner = fakeRunner();
   const { api, waitState, env } = await office(t, runner);
-  const { body } = await api('/api/jobs', { dept: 'military', text: 'Draft the export screening.' });
+  const { body } = await api('/api/jobs', { dept: 'capability', text: 'Draft the export screening.' });
   await waitState(body.id, ['waiting_approval']);
   const rej = await api(`/api/approvals/${body.id}`, { decision: 'reject', note: 'Always cite the document number.' });
   assert.equal(rej.body.state, 'rejected');
-  const lesson = readFileSync(join(env.EO_LIBRARY, 'lessons', 'military.md'), 'utf8');
+  const lesson = readFileSync(join(env.EO_LIBRARY, 'lessons', 'capability.md'), 'utf8');
   assert.match(lesson, /Always cite the document number\./);
   assert.match(lesson, /## \d{4}-\d{2}-\d{2} — Draft the export screening\./);
   const rev = await api(`/api/jobs/${body.id}/revise`, { note: 'Add numbers.' });
@@ -119,15 +119,15 @@ test('reject with a note writes a lesson that later jobs for that department rec
 });
 
 test('invalid plan → the lead does it alone; single mode → one piece; unknown route → the Boss keeps it', async (t) => {
-  const bogus = fakeRunner({ plan: [{ agent: 'nobody', title: 'x', text: 'y' }, { agent: 'mil-lead', title: 'lead', text: 'no' }] });
+  const bogus = fakeRunner({ plan: [{ agent: 'nobody', title: 'x', text: 'y' }, { agent: 'mil-cap-lead', title: 'lead', text: 'no' }] });
   const a = await office(t, bogus);
-  const j1 = (await a.api('/api/jobs', { dept: 'military', text: 'Something.' })).body;
+  const j1 = (await a.api('/api/jobs', { dept: 'capability', text: 'Something.' })).body;
   const r1 = await a.waitState(j1.id, ['waiting_approval', 'failed']);
   assert.equal(r1.pieces.length, 1);
-  assert.equal(r1.pieces[0].agent, 'mil-lead');
+  assert.equal(r1.pieces[0].agent, 'mil-cap-lead');
   assert.equal(r1.state, 'waiting_approval');
 
-  const j2 = (await a.api('/api/jobs', { dept: 'military', text: 'Something small.', mode: 'single' })).body;
+  const j2 = (await a.api('/api/jobs', { dept: 'capability', text: 'Something small.', mode: 'single' })).body;
   const r2 = await a.waitState(j2.id, ['waiting_approval', 'failed']);
   assert.equal(r2.pieces.length, 1);
   assert.equal(r2.mode, 'single');
@@ -142,12 +142,12 @@ test('invalid plan → the lead does it alone; single mode → one piece; unknow
 
 test('a failing piece does not sink the job; all failing pieces fail it', async (t) => {
   const some = await office(t, fakeRunner({ failPieces: ['mil-writer'] }));
-  const j = (await some.api('/api/jobs', { dept: 'military', text: 'Plan.' })).body;
+  const j = (await some.api('/api/jobs', { dept: 'capability', text: 'Plan.' })).body;
   const r = await some.waitState(j.id, ['waiting_approval', 'failed']);
   assert.equal(r.state, 'waiting_approval');
   assert.equal(r.pieces.find((p) => p.agent === 'mil-writer').state, 'failed');
   const all = await office(t, fakeRunner({ failPieces: ['mil-writer', 'mil-test-engineer', 'mil-req-analyst'] }));
-  const j2 = (await all.api('/api/jobs', { dept: 'military', text: 'Plan.' })).body;
+  const j2 = (await all.api('/api/jobs', { dept: 'capability', text: 'Plan.' })).body;
   const r2 = await all.waitState(j2.id, ['waiting_approval', 'failed']);
   assert.equal(r2.state, 'failed');
   assert.match(r2.error, /Every piece failed/);
@@ -155,15 +155,15 @@ test('a failing piece does not sink the job; all failing pieces fail it', async 
 
 test('cancel stops a running job; refused inputs give sentences', async (t) => {
   const { api, waitState } = await office(t, fakeRunner({ delayMs: 400 }));
-  const j = (await api('/api/jobs', { dept: 'military', text: 'Long job.' })).body;
+  const j = (await api('/api/jobs', { dept: 'capability', text: 'Long job.' })).body;
   await waitState(j.id, ['planning', 'working']);
   const c = await api(`/api/jobs/${j.id}/cancel`, {});
   assert.equal(c.body.state, 'cancelled');
   await new Promise((r) => setTimeout(r, 600));
   assert.equal((await api(`/api/jobs/${j.id}`)).body.state, 'cancelled');
   assert.equal((await api(`/api/jobs/${j.id}/cancel`, {})).status, 409);
-  assert.equal((await api('/api/jobs', { dept: 'military', text: '' })).status, 400);
-  assert.equal((await api('/api/jobs', { dept: 'military', text: 'x', mode: 'swarm' })).status, 400);
+  assert.equal((await api('/api/jobs', { dept: 'capability', text: '' })).status, 400);
+  assert.equal((await api('/api/jobs', { dept: 'capability', text: 'x', mode: 'swarm' })).status, 400);
   assert.equal((await api('/api/jobs', { dept: 'ghost', text: 'x' })).status, 400);
   assert.equal((await api('/api/approvals/nope', { decision: 'approve' })).status, 404);
 });
@@ -172,13 +172,13 @@ test('switched-off departments refuse jobs and are never routed to; the switch i
   const { api, env } = await office(t, fakeRunner(), { EO_OFF: 'business' });
   const org = (await api('/api/org')).body;
   assert.equal(org.departments.find((d) => d.key === 'business').on, false);
-  assert.ok(org.layout && org.layout.bays.length === 2);
+  assert.ok(org.layout && org.layout.bays.length === 9);
   assert.equal((await api('/api/jobs', { dept: 'business', text: 'Pay the invoice.' })).status, 409);
-  const saved = await api('/api/departments', { off: ['military'] });
+  const saved = await api('/api/departments', { off: ['capability'] });
   assert.equal(saved.body.restartRequired, true);
   const local = JSON.parse(readFileSync(env.EO_SETTINGS, 'utf8'));
-  assert.deepEqual(local.departments.military, { on: false });
-  assert.equal((await api('/api/departments', { off: ['boss', 'military', 'business'] })).status, 400);
+  assert.deepEqual(local.departments.capability, { on: false });
+  assert.equal((await api('/api/departments', { off: ['boss', 'intel', 'operations', 'information', 'cyber', 'warfare', 'logistics', 'capability', 'support', 'business'] })).status, 400);
   assert.equal((await api('/api/departments', { off: ['ghost'] })).status, 400);
   const audit = (await api('/api/audit?kind=settings')).body.entries;
   assert.equal(audit.length, 1);
@@ -189,8 +189,8 @@ test('restart marks running jobs failed with "office restarted"', async () => {
   mkdirSync(iso.env.EO_DATA, { recursive: true });
   const now = new Date().toISOString();
   writeFileSync(join(iso.env.EO_DATA, 'jobs.json'), JSON.stringify({ version: 1, jobs: [
-    { id: 'job-a', title: 'A', text: 'A', dept: 'military', mode: 'team', state: 'working', pieces: [{ id: 'p1', state: 'working' }], events: [], createdAt: now, updatedAt: now },
-    { id: 'job-b', title: 'B', text: 'B', dept: 'military', mode: 'team', state: 'waiting_approval', pieces: [], events: [], createdAt: now, updatedAt: now },
+    { id: 'job-a', title: 'A', text: 'A', dept: 'capability', mode: 'team', state: 'working', pieces: [{ id: 'p1', state: 'working' }], events: [], createdAt: now, updatedAt: now },
+    { id: 'job-b', title: 'B', text: 'B', dept: 'capability', mode: 'team', state: 'waiting_approval', pieces: [], events: [], createdAt: now, updatedAt: now },
   ] }));
   const o = await startOffice({ env: iso.env, runSession: fakeRunner(), log: () => {} });
   try {
@@ -214,7 +214,7 @@ test('server-sent events announce job changes and activity', async (t) => {
   const reader = res.body.getReader();
   const seen = new Set();
   let buf = '';
-  await api('/api/jobs', { dept: 'military', text: 'Events please.' });
+  await api('/api/jobs', { dept: 'capability', text: 'Events please.' });
   const dec = new TextDecoder();
   const deadline = Date.now() + 5000;
   while (Date.now() < deadline && !(seen.has('job') && seen.has('activity'))) {

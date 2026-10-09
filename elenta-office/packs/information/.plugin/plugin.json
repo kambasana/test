@@ -1,0 +1,33 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.information",
+  "name": "Elenta Information & Civil-Mil",
+  "version": "0.1.0",
+  "description": "Information operations and PSYOP doctrine, truthful public affairs and communication products, and civil-military and cultural liaison — truthful or EXERCISE-only.",
+  "keywords": [
+    "elenta",
+    "department",
+    "information",
+    "military"
+  ],
+  "personas": [
+    "agents/mil-io-lead.persona.md",
+    "agents/mil-influence.persona.md",
+    "agents/mil-mildec.persona.md",
+    "agents/mil-audience.persona.md",
+    "agents/mil-pao.persona.md",
+    "agents/mil-multimedia.persona.md",
+    "agents/mil-cimic.persona.md",
+    "agents/mil-cultural.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

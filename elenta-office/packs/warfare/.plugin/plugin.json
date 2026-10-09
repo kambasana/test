@@ -1,0 +1,42 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.warfare",
+  "name": "Elenta Warfare Doctrine",
+  "version": "0.1.0",
+  "description": "Land, aviation and maritime warfare written as doctrine, training, procedures and EXERCISE simulations only — no real operations, fire missions or strike tasking.",
+  "keywords": [
+    "elenta",
+    "department",
+    "warfare",
+    "military"
+  ],
+  "personas": [
+    "agents/mil-doctrine-lead.persona.md",
+    "agents/mil-infantry.persona.md",
+    "agents/mil-armour.persona.md",
+    "agents/mil-artillery.persona.md",
+    "agents/mil-airdef.persona.md",
+    "agents/mil-sapper.persona.md",
+    "agents/mil-recondoc.persona.md",
+    "agents/mil-sof.persona.md",
+    "agents/mil-atc.persona.md",
+    "agents/mil-fixedwing.persona.md",
+    "agents/mil-rotary.persona.md",
+    "agents/mil-rpa.persona.md",
+    "agents/mil-wso.persona.md",
+    "agents/mil-aircrew.persona.md",
+    "agents/mil-surface.persona.md",
+    "agents/mil-subsurface.persona.md",
+    "agents/mil-amphibious.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

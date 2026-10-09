@@ -159,7 +159,7 @@ export function exportPack(dept, { orgTitle = 'Office', version = '0.1.0', autho
     version,
     description: dept.about || `${titleCase(dept.name)} department`,
     ...(author ? { author } : {}),
-    keywords: ['elenta', 'department', dept.key],
+    keywords: ['elenta', 'department', dept.key, ...(dept.group ? [slugify(dept.group, 24)] : [])],
     personas: people.map(({ p }) => `agents/${p.id}.persona.md`),
     pack_instructions: 'instructions.md',
     defaults: { triggers: { mentions: true, keywords: [], all_messages: false }, thread_replies: true, broadcast_replies: false },
@@ -171,6 +171,7 @@ export function exportPack(dept, { orgTitle = 'Office', version = '0.1.0', autho
     key: dept.key,
     name: dept.name,
     about: dept.about || '',
+    ...(dept.group ? { group: dept.group } : {}),
     ...(dept.rules?.length ? { rules: dept.rules } : {}),
     ...(dept.boss ? { boss: true } : {}),
     ...(dept.color ? { color: dept.color } : {}),
@@ -297,6 +298,7 @@ export function readPack(dir, { keyHint } = {}) {
     if (problems.length) return fail();
     department = {
       key: structure.key, name: structure.name, about: structure.about || '',
+      ...(structure.group ? { group: structure.group } : {}),
       ...(Array.isArray(structure.rules) ? { rules: structure.rules } : {}),
       ...(structure.boss ? { boss: true } : {}), ...(structure.color ? { color: structure.color } : {}),
       lead: structure.lead ? person(structure.lead) : undefined,

@@ -283,7 +283,7 @@ export class JobEngine {
       }
 
       // Workspace library copy for the owning department.
-      const index = this.library.copyForDept(dept.key, ws).map((e) => ({ ...e }));
+      const index = this.library.copyForDept(dept, ws).map((e) => ({ ...e }));
       const lessons = this.library.lessonsText(dept.key);
       job.notes = index.map((e) => e.path);
 

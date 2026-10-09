@@ -43,7 +43,7 @@ test('the live server applies the guards and sends the security headers', async 
   const health = await (await fetch(`${base}/api/health`)).json();
   assert.equal(health.ok, true);
   assert.equal(health.product, 'Elenta Office');
-  assert.equal(health.departments, 3);
+  assert.equal(health.departments, 10);
   assert.equal(health.acp.adapter, '@agentclientprotocol/claude-agent-acp');
   // Body too large (streamed without a length header).
   const big = await fetch(`${base}/api/jobs`, { method: 'POST', headers: json, body: JSON.stringify({ text: 'x'.repeat(1024 * 1024 + 10) }) });

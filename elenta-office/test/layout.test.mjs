@@ -8,7 +8,7 @@ import { ROOT } from './helpers.mjs';
 test('the Elenta floor has no overlapping hub, library, bays or clusters', () => {
   const { org } = loadOrg(join(ROOT, 'orgs', 'elenta.json'));
   const layout = computeLayout(org.departments);
-  assert.equal(layout.bays.length, 2);
+  assert.equal(layout.bays.length, 9);
   assert.deepEqual(overlaps(layout), []);
 });
 

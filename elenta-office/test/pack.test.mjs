@@ -26,9 +26,9 @@ test('every shipped department round-trips through an Open Plugin Spec pack unch
 });
 
 test('persona files carry only Buzz frontmatter keys (Buzz rejects unknown ones)', () => {
-  const files = exportPack(shipped().departments.find((d) => d.key === 'military'), { orgTitle: 'Elenta' });
+  const files = exportPack(shipped().departments.find((d) => d.key === 'intel'), { orgTitle: 'Elenta' });
   const allowed = new Set(['name', 'display_name', 'avatar', 'description', 'version', 'author', 'skills', 'mcp_servers', 'subscribe', 'triggers', 'model', 'runtime', 'temperature', 'max_context_tokens', 'thread_replies', 'broadcast_replies', 'hooks']);
-  const mil = shipped().departments.find((d) => d.key === 'military');
+  const mil = shipped().departments.find((d) => d.key === 'intel');
   const n = deptPeople(mil).length;
   const personas = Object.entries(files).filter(([k]) => k.endsWith('.persona.md'));
   assert.equal(personas.length, n);
@@ -70,19 +70,19 @@ test('packs cannot reach outside their folder', () => {
 test('an org file can name a department by its pack folder', () => {
   const org = shipped();
   const dir = tempDir();
-  writePack(join(dir, 'packs', 'military'), exportPack(org.departments.find((d) => d.key === 'military'), { orgTitle: 'Elenta' }));
-  const raw = { title: 'Packed', departments: [{ key: 'boss', boss: true, lead: { name: 'Boss' } }, { pack: 'packs/military' }] };
+  writePack(join(dir, 'packs', 'intel'), exportPack(org.departments.find((d) => d.key === 'intel'), { orgTitle: 'Elenta' }));
+  const raw = { title: 'Packed', departments: [{ key: 'boss', boss: true, lead: { name: 'Boss' } }, { pack: 'packs/intel' }] };
   writeFileSync(join(dir, 'org.json'), JSON.stringify(raw));
   const { org: got, problems } = loadOrg(join(dir, 'org.json'));
   assert.deepEqual(problems, []);
-  assert.ok(deptPeople(got.departments[1]).length >= 90);
+  assert.ok(deptPeople(got.departments[1]).length >= 15);
 });
 
 test('department rules reach the workers and the lead\'s plan', () => {
   const org = shipped();
-  const mil = org.departments.find((d) => d.key === 'military');
+  const mil = org.departments.find((d) => d.key === 'intel');
   const sys = systemPromptFor('work', { org, dept: mil, person: mil.teams[2].people[0] });
-  assert.match(sys, /Rules of the MILITARY department/);
+  assert.match(sys, /Rules of the INTELLIGENCE department/);
   assert.match(sys, /targets/);
   const plan = planPrompt({ request: 'x', dept: mil, index: [], lessons: '', min: 2, max: 4, single: false });
   assert.match(plan, /Department rules/);

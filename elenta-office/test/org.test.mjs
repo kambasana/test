@@ -14,16 +14,24 @@ test('the shipped Elenta org is valid and has the expected shape', () => {
   assert.deepEqual(problems, []);
   assert.deepEqual(warnings, []);
   assert.equal(org.title, 'Elenta');
-  assert.deepEqual(org.departments.map((d) => d.key), ['boss', 'military', 'business']);
-  const mil = org.departments.find((d) => d.key === 'military');
-  const teams = mil.teams.map((t) => t.name);
-  for (const t of ['ALL-SOURCE INTEL (J2)', 'TECHNICAL INTEL', 'ISR & RECCE', 'CRYPTOLOGY', 'OPERATIONS (J3)', 'INFO OPS & PSYOP', 'ELECTRONIC WARFARE', 'LAND WARFARE DOCTRINE', 'AVIATION DOCTRINE', 'MARITIME DOCTRINE', 'PLANS (J5)', 'WARGAMING & OR', 'SOFTWARE & SYSTEMS', 'TEST & EVALUATION', 'DOCUMENTATION', 'MEDICAL']) assert.ok(teams.includes(t), t);
-  assert.ok(deptPeople(mil).length >= 90, `military has ${deptPeople(mil).length} people`);
-  assert.ok(mil.rules.some((r) => /targets/.test(r)), 'military keeps its no-targeting rule');
-  const biz = org.departments.find((d) => d.key === 'business');
-  assert.deepEqual(biz.teams.map((t) => t.name), ['FINANCE', 'CONTRACTS', 'ADMIN']);
+  const keys = org.departments.map((d) => d.key);
+  assert.equal(keys[0], 'boss');
+  assert.equal(keys[keys.length - 1], 'business');
+  const military = ['intel', 'operations', 'information', 'cyber', 'warfare', 'logistics', 'capability', 'support'];
+  for (const k of military) assert.ok(keys.includes(k), k);
+  // every military department is in the Military group and carries the rules
+  for (const k of military) {
+    const dept = org.departments.find((d) => d.key === k);
+    assert.equal(dept.group, 'Military', k);
+    assert.ok(dept.rules.some((r) => /targets/.test(r)), `${k} keeps the no-targeting rule`);
+    assert.ok(dept.lead, `${k} has a lead`);
+  }
+  assert.equal(org.departments.find((d) => d.key === 'business').group, 'Business');
   assert.equal(org.departments.filter((d) => d.boss).length, 1);
-  assert.ok(countPeople(org) >= 95);
+  // the intelligence department covers the full set of disciplines
+  const intel = org.departments.find((d) => d.key === 'intel');
+  for (const t of ['ALL-SOURCE INTEL (J2)', 'TECHNICAL INTEL', 'CRYPTOLOGY', 'ISR & RECCE', 'GEOSPATIAL & METOC']) assert.ok(intel.teams.map((x) => x.name).includes(t), t);
+  assert.ok(countPeople(org) >= 110, `people: ${countPeople(org)}`);
   const ids = org.departments.flatMap(deptPeople).map((p) => p.id);
   assert.equal(new Set(ids).size, ids.length);
 });
@@ -80,7 +88,7 @@ test('departments can be switched off, but at least one stays on', () => {
   const r1 = validateOrg(raw, { deptSettings: { business: { on: false }, ghost: { on: false } } });
   assert.equal(r1.org.departments.find((d) => d.key === 'business').on, false);
   assert.ok(r1.warnings.some((w) => w.includes('"ghost"')));
-  const r2 = validateOrg(raw, { deptSettings: { boss: { on: false }, military: { on: false }, business: { on: false } } });
+  const r2 = validateOrg(raw, { deptSettings: Object.fromEntries(raw.departments.map((d) => [d.key, { on: false }])) });
   assert.ok(r2.org.departments.every((d) => d.on));
   assert.ok(r2.warnings.some((w) => w.includes('at least one')));
 });
