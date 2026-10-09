@@ -1,0 +1,29 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.business",
+  "name": "Elenta Business",
+  "version": "0.1.0",
+  "description": "Owns the running of the company: money, contracts, purchasing and office administration.",
+  "keywords": [
+    "elenta",
+    "department",
+    "business"
+  ],
+  "personas": [
+    "agents/biz-lead.persona.md",
+    "agents/biz-accountant.persona.md",
+    "agents/biz-fin-analyst.persona.md",
+    "agents/biz-contracts.persona.md",
+    "agents/biz-office-manager.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

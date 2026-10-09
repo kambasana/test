@@ -51,7 +51,7 @@ test('a Boss job is routed, planned by sub-team, worked in parallel, combined an
   assert.equal(job.routedBy.by, 'boss');
   assert.ok(job.routedBy.why.length > 0);
   assert.equal(job.pieces.length, 3);
-  assert.deepEqual(new Set(job.pieces.map((p) => p.team)), new Set(['SOFTWARE', 'ANALYSIS', 'DOCUMENTATION']));
+  assert.deepEqual(new Set(job.pieces.map((p) => p.team)), new Set(['TEST & EVALUATION', 'CAPABILITY (J8)', 'DOCUMENTATION']));
   assert.ok(job.pieces.every((p) => p.state === 'done'));
   assert.match(job.deliverable, /# Combined deliverable/);
   assert.deepEqual(runner.calls.map((c) => c.role).sort(), ['combine', 'piece', 'piece', 'piece', 'plan', 'route']);

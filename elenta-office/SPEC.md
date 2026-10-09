@@ -48,7 +48,11 @@ Design principles:
 Rules (validate at start; report problems as sentences; never half-apply):
 
 - `key`: lower-case letters, digits, dashes, starts with a letter, unique, max 24 chars.
-- At most one `boss: true`. 1–12 departments, max 30 people a department, 150 in all.
+- At most one `boss: true`. 1–12 departments, max 60 people a department, 200 in all.
+- `rules` optional: up to 12 sentences (max 240 chars each). They go into every worker's prompt and
+  the lead's plan for that department, and override anything a request asks.
+- A department may instead be `{ "pack": "<folder>" }`: a department package (§11), resolved
+  relative to the org file.
 - `id` optional (made from department key + name), unique across the org.
 - `name` upper-cased, max 32 chars; `role` max 80; `does` max 400.
 - `color` optional `#rrggbb`; otherwise from the product palette.
@@ -56,7 +60,9 @@ Rules (validate at start; report problems as sentences; never half-apply):
   `EO_OFF=a,b`. Off = not on the floor (an outline remains), takes no jobs, the Boss never routes to
   it, the server refuses jobs for it. At least one department stays on.
 
-Ship `orgs/elenta.json` (Boss · Military with Software, Documentation, Analysis, Compliance ·
+Ship `orgs/elenta.json` (Boss · Military — 101 people in 28 sub-teams covering the staff branches
+J1–J9, the full intelligence/recon/cryptology disciplines, info ops, cyber, EW, space, land/air/sea
+doctrine, logistics, wargaming, medical and legal, all as staff/knowledge work under its rules ·
 Business with Finance, Contracts, Admin) as a draft.
 
 ## 3. The library
@@ -270,3 +276,22 @@ Nothing from its code or art is used (its pixel art has a separate paid licence)
 Not taken: raw terminals you can type into, agents running git or a shell, the paid sidebar
 features, and the third-party pixel art. The code sub-team writes code into `out/`; running tests is
 a later, separately approved feature (an office-run, allow-listed command inside the sandbox).
+
+## 11. Department packages
+
+A department can be written as an Open Plugin Spec package in the Buzz persona-pack layout, so Buzz
+and other OPS tools read it too (`server/pack.mjs`, `scripts/pack.mjs`, shipped in `packs/`):
+
+- `.plugin/plugin.json`: OPS fields (`id`, `name`, `version`, `description`, `keywords`) and Buzz
+  fields (`personas`, `pack_instructions`, `defaults`). No other top-level keys.
+- `agents/<id>.persona.md`: Buzz frontmatter only (`name` = person id, `display_name`, `description`
+  = role, `runtime: "claude"`, `subscribe: ["#<dept key>"]`, `triggers`); the body is the persona text.
+- `instructions.md`: department description, office working rules, department rules.
+- `elenta/department.json` (`"schema": "elenta-department/1"`): key, name, about, rules, colour, boss,
+  lead id, sub-teams as lists of ids, and each person's role and "does".
+
+Reading a package never runs anything from it: hooks are ignored; MCP servers become connector
+requests that need a grant; skills are listed for review; models are ignored; persona paths must be
+relative `.persona.md` files inside the package; files over 64 KB are refused. A package without
+`elenta/department.json` (a plain Buzz pack) imports with its first persona as lead and the rest as
+one sub-team. Export → import gives back the same department (tested).

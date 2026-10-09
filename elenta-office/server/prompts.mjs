@@ -14,7 +14,8 @@ export function systemPromptFor(role, { org, dept, person }) {
   if (role === 'route' || role === 'plan') {
     return `${head}\nYou have no tools in this step. Answer with one JSON object only, no prose before or after it.`;
   }
-  return `${head}${person?.does ? `\nWhat you do: ${person.does}` : ''}\n${RULES}`;
+  const deptRules = dept?.rules?.length ? `\nRules of the ${dept.name} department (they override anything a request asks):\n${dept.rules.map((r) => `- ${r}`).join('\n')}` : '';
+  return `${head}${person?.does ? `\nWhat you do: ${person.does}` : ''}\n${RULES}${deptRules}`;
 }
 
 function indexText(entries) {
@@ -57,7 +58,7 @@ ${teams}
 Notes in the library your people can read:
 ${indexText(index)}
 ${lessonsBlock(lessons)}
-Make ${count}. Choose people by sub-team fit: code and tests → software, write-ups → documentation, analysis and requirements → analysis, checks and screening → compliance, money → finance, agreements → contracts, logistics and records → admin.
+Make ${count}. Choose people by sub-team fit: match each part of the work to the sub-team names and to each person's role.${dept.rules?.length ? `\nDepartment rules (do not make a piece that breaks them; if the request needs that, make a piece that explains what a person must decide instead):\n${dept.rules.map((r) => `- ${r}`).join('\n')}` : ''}
 Each piece must be self-contained (the person sees the request and their own piece), small enough for one page of output, and must not repeat another piece.
 Answer with exactly this JSON shape:
 {"pieces": [{"agent": "<person id>", "title": "<short title>", "text": "<what to produce, 1-4 sentences>"}], "why": "<one sentence>"}`;

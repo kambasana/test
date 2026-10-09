@@ -1,0 +1,51 @@
+{
+  "schema": "elenta-department/1",
+  "key": "business",
+  "name": "BUSINESS",
+  "about": "Owns the running of the company: money, contracts, purchasing and office administration.",
+  "color": "#5B8DEF",
+  "lead": "biz-lead",
+  "teams": [
+    {
+      "name": "FINANCE",
+      "people": [
+        "biz-accountant",
+        "biz-fin-analyst"
+      ]
+    },
+    {
+      "name": "CONTRACTS",
+      "people": [
+        "biz-contracts"
+      ]
+    },
+    {
+      "name": "ADMIN",
+      "people": [
+        "biz-office-manager"
+      ]
+    }
+  ],
+  "people": {
+    "biz-lead": {
+      "role": "Head of business operations",
+      "does": "Splits business requests across finance, contracts and admin and delivers one combined answer."
+    },
+    "biz-accountant": {
+      "role": "Books, invoices and payments",
+      "does": "Prepares invoices, checks payments and keeps the books tidy using the invoice checklist."
+    },
+    "biz-fin-analyst": {
+      "role": "Budgets and forecasts",
+      "does": "Builds budgets, cost estimates and simple forecasts, and explains the numbers in plain words."
+    },
+    "biz-contracts": {
+      "role": "Drafts and reviews agreements",
+      "does": "Reviews contract terms against the contract review checklist and drafts plain-language summaries."
+    },
+    "biz-office-manager": {
+      "role": "Keeps the office running",
+      "does": "Handles purchasing, schedules, records and supplier contacts."
+    }
+  }
+}

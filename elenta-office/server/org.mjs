@@ -1,7 +1,9 @@
 // Org file loading and validation (SPEC §2). Problems are reported as sentences; an org with any
 // structural problem is not applied at all.
 import { readFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
 import { slugify } from './util.mjs';
+import { readPack } from './pack.mjs';
 
 /** Eight muted hues that read well on the dark background. */
 export const PALETTE = ['#C9A227', '#5B8DEF', '#3FB68B', '#D9738F', '#9B7FE6', '#E08A4F', '#4FB3C8', '#A3B04A'];
@@ -9,7 +11,7 @@ export const PALETTE = ['#C9A227', '#5B8DEF', '#3FB68B', '#D9738F', '#9B7FE6', '
 const KEY_RE = /^[a-z][a-z0-9-]{0,23}$/;
 const ID_RE = /^[a-z0-9][a-z0-9-]{0,47}$/;
 const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
-const LIMITS = { departments: 12, perDept: 30, total: 150, name: 32, role: 80, does: 400, about: 400, title: 60 };
+const LIMITS = { departments: 12, perDept: 120, total: 350, rules: 12, rule: 240, name: 32, role: 80, does: 400, about: 400, title: 60 };
 
 function str(v) { return typeof v === 'string' ? v.trim() : ''; }
 
@@ -77,6 +79,12 @@ export function validateOrg(raw, { deptSettings = {} } = {}) {
     if (name.length > LIMITS.name) problems.push(`${dw} name is longer than ${LIMITS.name} characters.`);
     const about = str(d.about);
     if (about.length > LIMITS.about) problems.push(`${dw} "about" is longer than ${LIMITS.about} characters.`);
+    const rules = [];
+    if (d.rules !== undefined) {
+      if (!Array.isArray(d.rules) || d.rules.some((r) => typeof r !== 'string' || !r.trim())) problems.push(`${dw} "rules" must be a list of sentences.`);
+      else if (d.rules.length > LIMITS.rules) problems.push(`${dw} has ${d.rules.length} rules; the most allowed is ${LIMITS.rules}.`);
+      else for (const r of d.rules) { if (r.trim().length > LIMITS.rule) problems.push(`${dw} has a rule longer than ${LIMITS.rule} characters.`); rules.push(r.trim()); }
+    }
     const boss = d.boss === true;
     if (boss) bosses++;
     let color = null;
@@ -105,7 +113,7 @@ export function validateOrg(raw, { deptSettings = {} } = {}) {
     });
     const count = total - before;
     if (count > LIMITS.perDept) problems.push(`${dw} has ${count} people; the most allowed is ${LIMITS.perDept}.`);
-    departments.push({ key, name, about, boss, color, on: true, lead, teams });
+    departments.push({ key, name, about, rules, boss, color, on: true, lead, teams });
   });
 
   if (bosses > 1) problems.push(`Only one department may be the boss; ${bosses} are marked "boss": true.`);
@@ -135,6 +143,22 @@ export function loadOrg(path, opts) {
   let raw;
   try { raw = JSON.parse(readFileSync(path, 'utf8')); } catch (err) {
     return { org: null, problems: [`Could not read the org file ${path}: ${err.message}.`], warnings: [] };
+  }
+  // A department may be given as { "pack": "<folder>" }: an Open Plugin Spec department package
+  // (SPEC §11), resolved relative to the org file. The org file is the owner's, so it stays on.
+  if (raw && Array.isArray(raw.departments)) {
+    const problems = [];
+    const warnings = [];
+    raw = { ...raw, departments: raw.departments.map((d, i) => {
+      if (!d || typeof d !== 'object' || typeof d.pack !== 'string') return d;
+      const r = readPack(resolve(dirname(path), d.pack));
+      problems.push(...r.problems.map((m) => `Department ${i + 1} (pack ${d.pack}): ${m}`));
+      warnings.push(...r.warnings.map((m) => `Pack ${d.pack}: ${m}`));
+      return r.department ? { ...r.department, ...(d.color ? { color: d.color } : {}) } : d;
+    }) };
+    if (problems.length) return { org: null, problems, warnings };
+    const out = validateOrg(raw, opts);
+    return { ...out, warnings: [...warnings, ...out.warnings] };
   }
   return validateOrg(raw, opts);
 }

@@ -1,0 +1,27 @@
+{
+  "schema": "elenta-department/1",
+  "key": "boss",
+  "name": "BOSS",
+  "about": "Reads every incoming request, decides which department owns it and hands it over with a reason.",
+  "boss": true,
+  "color": "#3FB68B",
+  "lead": "boss",
+  "teams": [
+    {
+      "name": "OFFICE OF THE BOSS",
+      "people": [
+        "chief-of-staff"
+      ]
+    }
+  ],
+  "people": {
+    "boss": {
+      "role": "Head of the office",
+      "does": "Weighs each request against what the departments own and sends it to the one best placed to deliver it."
+    },
+    "chief-of-staff": {
+      "role": "Keeps the Boss's desk in order",
+      "does": "Drafts short briefs and status notes for the Boss and handles requests that belong to no department."
+    }
+  }
+}

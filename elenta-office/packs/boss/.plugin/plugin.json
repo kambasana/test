@@ -1,0 +1,26 @@
+{
+  "$schema": "https://open-plugin-spec.org/schema/v1/plugin.json",
+  "id": "elenta.boss",
+  "name": "Elenta Boss",
+  "version": "0.1.0",
+  "description": "Reads every incoming request, decides which department owns it and hands it over with a reason.",
+  "keywords": [
+    "elenta",
+    "department",
+    "boss"
+  ],
+  "personas": [
+    "agents/boss.persona.md",
+    "agents/chief-of-staff.persona.md"
+  ],
+  "pack_instructions": "instructions.md",
+  "defaults": {
+    "triggers": {
+      "mentions": true,
+      "keywords": [],
+      "all_messages": false
+    },
+    "thread_replies": true,
+    "broadcast_replies": false
+  }
+}

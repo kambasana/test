@@ -122,6 +122,74 @@ triggers posting a marker the control plane acts on.
 
 **Not used from Buzz:** `buzz-acp`, `buzz-agent`, `buzz-dev-mcp`, workflow approval steps.
 
+### 5.1 Stick to Buzz: extend it, never fork it (decided 2026-10-09)
+
+Buzz is the base and the place people talk to their teammates: its desktop and mobile apps, its
+channels, threads and DMs. Elenta adds what Buzz does not have, through Buzz's public interfaces only
+(REST, WebSocket subscriptions, the CLI/SDK, webhooks and the event kinds the relay already accepts).
+We do not patch or fork Buzz. Anything we need from Buzz itself we propose upstream (Apache-2.0); a
+fork is a last resort, decided by the owner, for a feature upstream refuses and we cannot live
+without. Upstream proposals are tracked in [UPSTREAM.md](UPSTREAM.md).
+
+**What Elenta adds on top of Buzz**
+
+| Addition | What it is | How it attaches to Buzz |
+|---|---|---|
+| **Agent visualisation dashboard** | The Office: 3D floor of departments, sub-teams and desks; avatars in four states (working, waiting for you, refused/stopped, idle); live activity line per teammate; job timeline; cost per teammate and team | Reads the signals Buzz's own app uses: observer frames (kind 24200) and typing (kind 20002) for "working", plus our job/piece records (kind 45010) and channel messages. Read-only; no new kinds |
+| **Needs you** | One inbox for sign-offs, questions, connector actions and budget limits, with exactly what will happen | Decisions are owner-signed events in the job thread; until Buzz renders decision cards, the thread gets a message with a link to the dashboard |
+| **Control plane** | Chief of Staff routing, team planning, ACP runner with permission policy (no shell, env allowlist, workspace jail), budgets with reservations, pause/resume/terminate, review stages, memory and lessons, routines with skip-if-running | Holds the teammates' keys and posts as them; jobs = threads, pieces = kind 45010 records |
+| **Connector Gateway** | The only MCP server agents see; Composio tier and local tier; Allow / Ask / Never per team and tool | Grants recorded as events; approvals replay the exact arguments |
+| **Department packages** | A department (sub-teams, people, rules) as an Open Plugin Spec package in Buzz's persona-pack layout | Buzz's own validator accepts them (`buzz pack validate`); see 5.2 |
+
+**What we use from Buzz as is:** relay, identities, channels, threads, DMs, search, canvases, media,
+hash-chained audit, schedule-trigger workflows (routines), git hosting, the desktop and mobile apps.
+**What we do not run:** `buzz-acp`, `buzz-agent`, `buzz-dev-mcp` (they auto-approve and give agents a
+shell) and workflow approval steps (they fail today).
+
+### 5.2 Department packages = Open Plugin Spec packages (done 2026-10-09)
+
+A department is one package, the same family as Buzz persona packs, so a team defined in Elenta can
+be read by Buzz and other OPS tools and we follow a standard instead of inventing one.
+
+```
+packs/military/
+  .plugin/plugin.json         OPS manifest + Buzz fields (personas, pack_instructions, defaults)
+  agents/<id>.persona.md      one teammate; Buzz frontmatter only (Buzz rejects unknown keys there)
+  instructions.md             department instructions and rules
+  elenta/department.json      our extras: sub-teams, lead, colour, rules, "does" (others ignore it)
+```
+
+- `node scripts/pack.mjs export orgs/elenta.json all packs` writes them; `check <dir>` prints the
+  review. An org file can name a department as `{ "pack": "packs/military" }`.
+- Checked with Buzz's own validator (`buzz_persona::validate::validate_pack`): Boss, Military and
+  Business packs are valid with no warnings; Buzz's example pack imports into Elenta.
+- Import is data only: hooks are never run, MCP servers are never started (they become connector
+  requests that need a grant), skills are listed for review, model choices are ignored, paths cannot
+  leave the pack. Packs imported from outside start paused behind a "Meet your new team" review.
+
+### 5.3 The Military department (2026-10-09)
+
+One department, **101 teammates in 28 sub-teams**, covering the staff branches and every technical
+and operational domain as staff and knowledge work: command group · personnel (J1) · all-source and
+technical intelligence (HUMINT/SIGINT/MASINT/DOMEX/biometrics doctrine) · cryptology · ISR & recce
+(GEOINT/imagery, OSINT) · geospatial & METOC · operations (J3) · information operations & PSYOP ·
+civil-military (J9) · cyber defence & adversary emulation (J6) · electronic warfare · space ·
+land / aviation / maritime warfare doctrine · plans (J5) · wargaming & operational research ·
+training & exercises (J7) · capability (J8) · science & technology · software & systems · test &
+evaluation · logistics (J4) · engineering & maintenance · documentation · medical · legal, police
+& compliance.
+
+Every one of these is a sandboxed text agent that writes doctrine, training, plans, procedures,
+analysis and EXERCISE simulations — not an operator. The department's rules travel with it (prompts,
+plans and the package) and hold the line: **staff and analysis work only, people decide and act**; no
+selecting, locating, prioritising or recommending weapon employment against real people, places or
+objects; intel / recon / SIGINT / MASINT / DOMEX only on supplied or open-source material, no
+collection on or biometric identification of private individuals; cyber and adversary-emulation on
+authorised or lab systems only; information and deception work truthful or clearly-marked EXERCISE;
+combat / aviation / naval / artillery / special-operations roles produce doctrine and training only;
+nothing classified, ITAR/EAR or CUI; medical, legal and detainee-handling work follows the law of
+armed conflict and flags anything needing a qualified human.
+
 **Security defaults (vs. what the others ship):** ask first for anything that sends, shares,
 deletes, pays or runs unattended (Rakazo and Grok default the other way) · no shell, no host access,
 no open network · agents never hold keys or credentials (the env allowlist is done) · approvals are
@@ -143,22 +211,23 @@ Estimates assume one engineer with Claude; each phase ends with its tests green 
 
 | # | Phase | What ships | Tests | Est. |
 |---|---|---|---|---|
-| 0 | ~~Foundations~~ | Server, ACP runner with policy, Boss routing, team runs, approvals, audit, env allowlist | 41 unit + live run | done |
-| 1 | **Conversation-first app** | Teammate list, chat timeline with cards (plan, progress, question, approval, result), composer with @mentions and mid-job instructions, Needs you inbox, teammate profile; the Office view one click away | Playwright flows: give work, approve, send back, redirect, stop | 2–3 wk |
+| 0 | ~~Foundations~~ | Server, ACP runner with policy, Boss routing, team runs, approvals, audit, env allowlist, OPS department packages, full Military department | 47 unit + live run; Buzz validator on packs | done |
+| 1 | **Buzz as the conversation, Elenta as the dashboard** | Teammates live in Buzz channels/DMs (talk to them in Buzz's app); Elenta dashboard: the Office (3D) driven by Buzz working signals, Needs you inbox, job timeline, teammate profile, costs | Playwright flows: give work, approve, send back, redirect, stop | 2–3 wk |
 | 2 | **Teammates that feel alive** | Chief of Staff speaks first; avatars with state motion; quiet progress notes; latest-line previews; group chats with one owner per stage; teammate-to-teammate messages with intents and hop limit | Conversation tests with a fake engine + one live run | 2 wk |
 | 3 | **Buzz as the record** | Buzz kit (pinned image, loopback, no attestation login); identities per teammate held by the control plane; teams = channels, jobs = threads, pieces = records; audit anchoring | Relay integration tests; isolation tests (non-member can't read) | 2 wk |
 | 4 | **Trust controls** | One owner + blockers; budgets with reservation and hard stop; pause/resume/terminate (confirmed); review stages; "Why these tools?" | Overshoot test, blocker release, terminate confirm | 2 wk |
 | 5 | **Connectors** | Connector Gateway; local tier (one server); Composio pilot for one team (mail, calendar, drive) with listed tools only and ZDR; inline approval cards replay exact arguments; grants UI | Gateway policy tests; denied call never reaches Composio | 2–3 wk |
 | 6 | **Memory, skills, routines** | Editable memory pages; lessons from send-backs; "save as skill"; routines from a sentence with skip-if-running | Memory edits reflected in next run; routine skip test | 2 wk |
 | 7 | **Code teams** | Buzz git hosting for a Software sub-team: office commits, review card in the thread, merge only the approved commit | Merge refused if commit changed; non-owner approval rejected | 1–2 wk |
-| 8 | **Team packages & polish** | Department packages (Markdown + YAML) with "Meet your new team"; export/import (paused); light/dark; mobile-friendly web; accessibility pass | Import starts paused; a11y checks | 1–2 wk |
+| 8 | **Team packages & polish** | ~~OPS packages~~ (done); "Meet your new team" review screen; import paused; offer packs to Buzz's planned app store; light/dark; mobile-friendly dashboard; accessibility pass | Import starts paused; a11y checks | 1–2 wk |
 
 Total ≈ 14–18 weeks to a complete product; phases 1–2 alone already deliver the teammate experience
 on today's backend.
 
 ## 8. Decisions needed from the owner
 
-1. **Conversation in the centre, Office one click away** (recommended) — or keep the floor central.
+1. **Dashboard home screen:** Needs you + Office side by side (recommended, since conversation now
+   happens in Buzz's app) — or the 3D floor full screen.
 2. **Composio terms:** accept the cloud tier for everyday apps with Zero Data Retention (paid add-on)
    and our own OAuth apps; ask Composio for written answers on the May 2026 incident and
    CVE-2026-59807 before rollout.
