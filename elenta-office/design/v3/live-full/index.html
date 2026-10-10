@@ -231,7 +231,7 @@ const cnt=(ppl,s)=>ppl.filter(p=>p.status===s).length;
 const cap=s=>s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();
 const monthName=()=>["January","February","March","April","May","June","July","August","September","October","November","December"][new Date().getMonth()];
 
-let level='office', curGroup='Military', curDept='intel', selected=null, angle=0, motion=true, zoom=1, pan={x:0,y:0}, drag=null;
+let level='office', curGroup='Military', curDept='intel', selected=null, angle=0, motion=false, zoom=1, pan={x:0,y:0}, drag=null;
 const floor=document.getElementById('floor');
 const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function node(tag,a={},p=floor){const n=document.createElementNS(NS,tag);for(const k in a)n.setAttribute(k,a[k]);p.append(n);return n}
@@ -248,6 +248,7 @@ function worker(parent,x,y,p,big){const P=pos(x,y);const g=node('g',{class:'work
   if(p.status==='waiting'||p.status==='refused')node('image',{href:'vector/marker-'+(p.status==='waiting'?'question':'stop')+'.svg',x:P.x-15*sc,y:P.y-(132*sc),width:35*sc,height:26*sc},g);
   else if(p.status==='working'&&motion)node('image',{href:'vector/marker-typing.svg',x:P.x-13*sc,y:P.y-127*sc,width:26*sc,height:22*sc,class:'bubble'},g);
   g.onclick=e=>{e.stopPropagation();pickWorker(p.dept+':'+p.id);};g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickWorker(p.dept+':'+p.id);}}
+  g.addEventListener('pointerenter',e=>showTip(p,e));g.addEventListener('pointermove',moveTip);g.addEventListener('pointerleave',hideTip);g.addEventListener('focus',()=>showTipAt(p,P));g.addEventListener('blur',hideTip);
 }
 // cluster a department's people by sub-team into a compact region at origin (ox,oy); returns {positions,labels,w,h}
 function deptClusters(d,ox,oy){const teams=[];if(d.lead)teams.push({name:'Lead',people:[{...d.lead,isLead:true,dept:d.key}]});
@@ -256,7 +257,7 @@ function deptClusters(d,ox,oy){const teams=[];if(d.lead)teams.push({name:'Lead',
   teams.forEach((t,i)=>{const col=i%cpr,row=Math.floor(i/cpr);maxCol=Math.max(maxCol,col);maxRow=Math.max(maxRow,row);
     const bx=ox+col*cellW,by=oy+row*cellH;
     t.people.forEach((p,j)=>{const px=bx+(j%3)*1.55,py=by+Math.floor(j/3)*1.75;positions.push({p,x:px,y:py});});
-    labels.push({x:bx+Math.min(t.people.length,3)*0.75-0.7,y:by-0.5,team:t.name,n:t.people.length,lead:t.name==='Lead'});});
+    labels.push({x:bx+0.15,y:by+0.15,team:t.name,n:t.people.length,lead:t.name==='Lead'});});
   return {positions,labels,w:(maxCol+1)*cellW,h:(maxRow+1)*cellH};
 }
 
@@ -274,11 +275,11 @@ function drawOffice(){
   const cmd=DEPT['boss'];const cc=deptClusters(cmd,0.6,1.0);
   roomRect(0,0,cc.w+1.2,cc.h+1.6,DEPTCOL.command,'--cmd-fill','room',{'data-dept':'boss'});
   cc.positions.sort((a,b)=>(a.y-b.y)).forEach(o=>worker(floor,o.x,o.y,o.p,true));
-  overlay.push({kind:'room',x:(cc.w+1.2)/2,y:-0.1,name:'COMMAND',meta:'Boss · Chief of staff',col:'--cmd'});
+  overlay.push({kind:'room',x:0.3,y:0.15,name:'COMMAND',meta:cmd.count+' people',col:'--cmd'});
   const biz=DEPT['business'];const bc=deptClusters(biz,0.6,0.9);const boy=cc.h+3.2;
   roomRect(0,boy-0.3,bc.w+1.2,bc.h+1.6,DEPTCOL.business,'--biz-fill','room',{'data-dept':'business'});
   bc.positions.sort((a,b)=>(a.y-b.y)).forEach(o=>worker(floor,o.x,o.y+boy,o.p,true));
-  overlay.push({kind:'room',x:(bc.w+1.2)/2,y:boy-0.4,name:'BUSINESS',meta:biz.count+' people · '+biz.teams.length+' sub-teams',col:'--biz'});
+  overlay.push({kind:'room',x:0.3,y:boy-0.15,name:'BUSINESS',meta:biz.count+' people',col:'--biz'});
   // Military group block on the right
   const gx=Math.max(cc.w,bc.w)+2.4, mp=groupPeople('Military');
   const mw=10, mh=11;
@@ -289,14 +290,14 @@ function drawOffice(){
   mds.forEach((d,i)=>{const col=i%4,row=Math.floor(i/4);const tx=gx+1.4+col*2.3,ty=2.0+row*4.4;
     const rep=deptPeople(d).find(x=>!x.isLead)||deptPeople(d)[0];worker(floor,tx,ty,{...rep},false);});
   const ms=statusSummary(mp);
-  overlay.push({kind:'room',x:gx+mw/2,y:-0.3,name:'MILITARY',meta:'8 departments · '+mp.length+' people · '+ms.working+' working',col:'--mil'});
+  overlay.push({kind:'room',x:gx+0.4,y:0.2,name:'MILITARY',meta:'8 depts · '+mp.length+' people',col:'--mil'});
 }
 function statusSummary(ppl){return {working:cnt(ppl,'working'),waiting:cnt(ppl,'waiting'),refused:cnt(ppl,'refused'),idle:cnt(ppl,'idle')};}
 function drawGroup(){const mds=groupDepts(curGroup);
   mds.forEach((d,i)=>{const col=i%4,row=Math.floor(i/4);const rx=col*6.2,ry=row*6.0;
     roomRect(rx,ry,5.4,5.0,'--mil','--mil-fill','room',{'data-dept':d.key});
     const ppl=deptPeople(d).slice(0,6);ppl.forEach((p,j)=>{const px=rx+0.9+(j%3)*1.5,py=ry+1.3+Math.floor(j/3)*2.0;worker(floor,px,py,p,false);});
-    overlay.push({kind:'tile',x:rx+2.7,y:ry-0.1,name:d.name,n:d.count,col:'--mil',status:statusSummary(deptPeople(d))});});
+    overlay.push({kind:'tile',x:rx+0.3,y:ry+0.15,name:d.name,n:d.count,col:'--mil'});});
 }
 function drawDept(){const d=DEPT[curDept];const col=DEPTCOL[curDept]||'--mil',fill=(curDept==='business')?'--biz-fill':(curDept==='boss')?'--cmd-fill':'--mil-fill';
   const cl=deptClusters(d,0.8,1.2);
@@ -309,12 +310,19 @@ const ov=document.createElement('div');ov.style.cssText='position:absolute;inset
 function svgClient(sx,sy){const m=floor.getScreenCTM();const q=floor.createSVGPoint();q.x=sx;q.y=sy;const r=q.matrixTransform(m);const b=document.getElementById('stage').getBoundingClientRect();return {x:r.x-b.left,y:r.y-b.top};}
 function dots(s){return ['working','waiting','refused','idle'].filter(k=>s[k]).map(k=>`<span style="display:inline-flex;align-items:center;gap:3px;color:var(--muted)"><span style="width:7px;height:7px;border-radius:50%;background:var(--${k})"></span>${s[k]}</span>`).join('<span style="color:var(--line)">·</span>');}
 function placeOverlay(){ov.innerHTML='';for(const L of overlay){const c=pos(L.x,L.y);const pt=svgClient(c.x,c.y);const d=document.createElement('div');
-  d.style.cssText=`position:absolute;left:${pt.x}px;top:${pt.y}px;transform:translate(-50%,-115%);white-space:nowrap`;
-  if(L.kind==='room'||L.kind==='grouphdr'){d.innerHTML=`<div style="background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:5px 9px;box-shadow:0 4px 12px rgba(20,25,35,.1)"><div style="display:flex;align-items:center;gap:7px;font:600 12px/1 var(--f-sans)"><span style="width:10px;height:10px;border-radius:3px;background:var(${L.col})"></span>${L.name}</div><div style="font:500 11px/1 var(--f-sans);color:var(--muted);margin-top:4px">${L.meta}</div></div>`;}
-  else if(L.kind==='tile'){d.innerHTML=`<div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px;box-shadow:0 3px 10px rgba(20,25,35,.1)"><div style="display:flex;align-items:center;gap:6px;font:600 11px/1 var(--f-mono);letter-spacing:.03em"><span style="width:8px;height:8px;border-radius:2px;background:var(${L.col})"></span>${L.name} <span style="color:var(--faint)">${L.n}</span></div><div style="display:flex;gap:6px;font:11px/1 var(--f-sans);margin-top:4px">${dots(L.status)}</div></div>`;}
-  else{d.innerHTML=`<div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 9px;box-shadow:0 3px 10px rgba(20,25,35,.1);font:600 10.5px/1 var(--f-mono);letter-spacing:.04em;display:flex;align-items:center;gap:7px">${L.lead?'<span style="color:var(--waiting)">★</span>':''}${L.team.toUpperCase()}${L.n>1?` <span style="color:var(--faint)">${L.n}</span>`:''}</div>`;}
+  d.style.cssText=`position:absolute;left:${pt.x}px;top:${pt.y}px;transform:translate(-14%,-120%);white-space:nowrap`;
+  if(L.kind==='room'||L.kind==='grouphdr'){d.innerHTML=`<div style="background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:8px;padding:4px 8px;box-shadow:0 2px 8px rgba(20,25,35,.08)"><div style="display:flex;align-items:center;gap:6px;font:600 11.5px/1 var(--f-sans)"><span style="width:9px;height:9px;border-radius:3px;background:var(${L.col})"></span>${L.name}</div><div style="font:500 10.5px/1 var(--f-sans);color:var(--muted);margin-top:3px">${L.meta}</div></div>`;}
+  else{d.innerHTML=`<div style="background:color-mix(in srgb,var(--panel) 90%,transparent);border:1px solid var(--line);border-radius:7px;padding:3px 7px;box-shadow:0 1px 6px rgba(20,25,35,.08);font:600 10px/1 var(--f-mono);letter-spacing:.03em;display:flex;align-items:center;gap:6px">${L.lead?'<span style="color:var(--waiting)">★</span>':`<span style="width:7px;height:7px;border-radius:2px;background:var(${L.col||'--mil'})"></span>`}${L.name||L.team.toUpperCase()}${(L.n||0)>1?` <span style="color:var(--faint)">${L.n}</span>`:''}</div>`;}
   ov.appendChild(d);}
 }
+// single hover tooltip (progressive disclosure: one detail at a time)
+const tip=document.createElement('div');tip.style.cssText='position:absolute;pointer-events:none;z-index:5;display:none;background:var(--ink);color:var(--panel);font:600 11.5px/1.2 var(--f-sans);padding:6px 9px;border-radius:8px;box-shadow:0 4px 14px rgba(0,0,0,.25);white-space:nowrap';document.getElementById('stage').appendChild(tip);
+const stNice={working:'Working',waiting:'Waiting for you',refused:'Refused / stopped',idle:'Idle'};
+function tipHtml(p){return `${p.name} <span style="opacity:.6">·</span> <span style="color:${C[p.status]}">${stNice[p.status]}</span><div style="font-weight:400;opacity:.8;margin-top:3px;font-size:10.5px">${p.role||p.team}</div>`;}
+function showTip(p,e){tip.innerHTML=tipHtml(p);tip.style.display='block';moveTip(e);}
+function showTipAt(p,P){const b=document.getElementById('stage').getBoundingClientRect();const s=svgClient(P.x,P.y-90);tip.innerHTML=tipHtml(p);tip.style.display='block';tip.style.left=s.x+'px';tip.style.top=(s.y)+'px';tip.style.transform='translate(-50%,-100%)';}
+function moveTip(e){const b=document.getElementById('stage').getBoundingClientRect();tip.style.left=(e.clientX-b.left+12)+'px';tip.style.top=(e.clientY-b.top-10)+'px';tip.style.transform='translateY(-100%)';}
+function hideTip(){tip.style.display='none';}
 // clicks on empty rooms
 floor.addEventListener('click',e=>{if(drag&&drag.moved)return;const r=e.target.closest('.room');if(!r)return;
   if(r.dataset.group)openGroup(r.dataset.group);else if(r.dataset.dept)openDept(r.dataset.dept);});
