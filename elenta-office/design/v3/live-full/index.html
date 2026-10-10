@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elenta Office</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --page:#EEF0F3; --panel:#FFFFFF; --ink:#1E2530; --muted:#5B6673; --faint:#97A1AD;
+  --line:#E4E8ED; --line2:#EDF0F3; --sunk:#F4F6F8; --accent:#2F6FED;
+  --cmd:#334155; --mil:#657337; --biz:#6554E8; --lib:#188C86;
+  --cmd-fill:#EDF0F4; --mil-fill:#F1F2E5; --biz-fill:#EEEDF9; --lib-fill:#E9F4F1;
+  --stage:#EEF0F5; --roomstroke-a:1;
+  --working:#14B8A6; --waiting:#F59E0B; --refused:#EF4444; --idle:#9CA3AF;
+  --f-sans:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page:#0C0F14; --panel:#141A22; --ink:#E7EDF4; --muted:#93A0AF; --faint:#6A7684;
+  --line:#242E3A; --line2:#1C242E; --sunk:#10151C; --accent:#5A8DF2;
+  --cmd:#8695A8; --mil:#A6B265; --biz:#9A8FF0; --lib:#39B3A9;
+  --cmd-fill:#1C232E; --mil-fill:#20241A; --biz-fill:#1E1B2B; --lib-fill:#122621;
+  --stage:#0E131A; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --page:#0C0F14; --panel:#141A22; --ink:#E7EDF4; --muted:#93A0AF; --faint:#6A7684;
+  --line:#242E3A; --line2:#1C242E; --sunk:#10151C; --accent:#5A8DF2;
+  --cmd:#8695A8; --mil:#A6B265; --biz:#9A8FF0; --lib:#39B3A9;
+  --cmd-fill:#1C232E; --mil-fill:#20241A; --biz-fill:#1E1B2B; --lib-fill:#122621;
+  --stage:#0E131A; color-scheme:dark;
+}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-sans);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.app{display:flex;flex-direction:column;height:100%}
+.top{display:flex;align-items:center;gap:13px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.01em}
+.logo i{width:20px;height:20px;border-radius:6px;background:var(--ink);position:relative}
+.logo i::after{content:"";position:absolute;inset:5px;border-radius:50%;border:2px solid var(--panel)}
+.sub{color:var(--muted);font-size:12.5px}
+.sbadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mil);background:color-mix(in srgb,var(--working) 14%,transparent);border:1px solid color-mix(in srgb,var(--working) 34%,transparent);padding:3px 9px;border-radius:999px}
+.sbadge i{width:7px;height:7px;border-radius:50%;background:var(--working)}
+.nav{margin-left:auto;display:flex;align-items:center;gap:3px}
+.nav a{font-size:13px;color:var(--muted);padding:6px 9px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.nav a.on{color:var(--ink);background:var(--sunk);font-weight:600}
+.nav a:hover{color:var(--ink)}
+.navb{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--waiting);color:#fff;font-size:11px;font-weight:700;margin-left:5px}
+.tbtn{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;width:32px;height:30px;cursor:pointer;font-size:14px}
+.tbtn:hover{color:var(--ink)}
+.kbd{border:1px solid var(--line);border-radius:7px;padding:4px 7px;color:var(--muted);font-size:12px}
+.main{flex:1;display:grid;grid-template-columns:232px 1fr 360px;min-height:0}
+@media (max-width:1120px){.main{grid-template-columns:200px 1fr}.rcol{display:none}}
+@media (max-width:720px){.main{grid-template-columns:1fr}.lcol{display:none}}
+.col{min-height:0;overflow:auto}
+.lcol{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
+.rcol{border-left:1px solid var(--line);background:var(--panel)}
+.eyebrow{font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.deptcard{display:block;width:100%;text-align:left;border:none;background:none;cursor:pointer;padding:11px 16px;border-bottom:1px solid var(--line2);font-family:inherit}
+.deptcard:hover,.deptcard.on{background:var(--sunk)}
+.dc-top{display:flex;align-items:center;gap:8px}
+.sq{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+.dc-name{font-weight:600}
+.dc-count{margin-left:auto;color:var(--faint);font:600 12px/1 var(--f-mono)}
+.dc-sub{color:var(--muted);font-size:12px;margin:3px 0 0 19px}
+.dc-stat{display:flex;gap:12px;margin:6px 0 0 19px;font-size:12px}
+.dc-stat span{display:inline-flex;align-items:center;gap:5px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.budget{margin-top:auto;border-top:1px solid var(--line);padding:14px 16px}
+.bar{height:7px;border-radius:999px;background:var(--sunk);overflow:hidden;margin-top:7px}
+.bar>i{display:block;height:100%;border-radius:999px;background:var(--mil)}
+.spendrow{display:flex;justify-content:space-between;align-items:baseline}
+.spendrow b{font-family:var(--f-mono)}
+/* stage */
+.stagewrap{position:relative;overflow:hidden;background:var(--stage)}
+#floor{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+#floor.drag{cursor:grabbing}
+.chip{position:absolute;display:inline-flex;align-items:center;gap:8px;background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);
+  border-radius:999px;padding:5px 11px;font-size:12px;color:var(--muted);backdrop-filter:blur(4px)}
+.chip .lead{font:600 11px/1 var(--f-mono);letter-spacing:.06em;color:var(--ink)}
+.tl{left:14px;top:12px}
+.tools{position:absolute;right:14px;top:12px;display:flex;gap:6px}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.btn:hover{border-color:var(--faint)}
+.btn.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.zoom{position:absolute;right:14px;bottom:12px;display:flex;gap:6px}
+.zoom .btn{width:34px;height:30px;padding:0;font-size:15px}
+.zoom .fit{width:auto;padding:0 12px;font-size:12.5px}
+.legend{position:absolute;left:14px;bottom:12px;display:flex;gap:11px;flex-wrap:wrap;background:color-mix(in srgb,var(--panel) 88%,transparent);
+  border:1px solid var(--line);padding:7px 11px;border-radius:10px;font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.back{position:absolute;left:14px;top:12px;display:flex;align-items:center;gap:8px}
+.room{cursor:pointer}
+.room:hover{filter:brightness(.98)}
+.worker{cursor:pointer}
+.worker:hover{filter:drop-shadow(0 1px 3px rgba(20,25,35,.3))}
+.worker:focus{outline:none}
+.worker.sel{filter:drop-shadow(0 0 0 rgba(0,0,0,0))}
+.bubble{animation:pulse 1.6s ease-in-out infinite}
+.no-motion .bubble{animation:none}
+@keyframes pulse{50%{opacity:.4}}
+@media(prefers-reduced-motion:reduce){.bubble{animation:none}}
+/* right panel */
+.rsec{padding:14px 16px;border-bottom:1px solid var(--line)}
+.rsec h3{margin:0 0 9px;font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:8px}
+.q{font-weight:600;margin-bottom:8px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}
+.pchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12.5px;cursor:pointer;background:var(--panel);color:var(--ink);font-family:inherit}
+.pchip.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.pchip .sq{width:9px;height:9px;border-radius:3px}
+textarea{width:100%;min-height:62px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);background:var(--panel);resize:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:none;background:var(--panel);color:var(--muted);padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.seg button.on{background:var(--sunk);color:var(--ink);font-weight:600}
+.send{margin-left:auto;background:var(--lib);color:#fff;border:none;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.row{display:flex;align-items:center;gap:10px}
+.help{color:var(--muted);font-size:12px;margin-top:8px}
+.card{border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-top:10px}
+.card.wait{background:color-mix(in srgb,var(--waiting) 7%,var(--panel));border-color:color-mix(in srgb,var(--waiting) 28%,var(--line))}
+.ctag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px}
+.ctag.signoff,.ctag.ques{color:#8a5a00;background:color-mix(in srgb,var(--waiting) 18%,transparent)}
+.ctag.work{color:#0c7566;background:color-mix(in srgb,var(--working) 16%,transparent)}
+.chead{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+.chead .when{margin-left:auto}
+.ctitle{font-weight:600;margin:7px 0 4px}
+.cmeta{color:var(--muted);font-size:12px}
+.cact{display:flex;gap:8px;margin-top:10px}
+.cact .pri{background:var(--lib);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.cact .sec{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.prog{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}
+.prog .p{font:600 9.5px/1 var(--f-mono);letter-spacing:.05em;color:var(--faint)}
+.prog .pb{height:5px;border-radius:999px;background:var(--sunk);margin-top:4px;overflow:hidden}
+.prog .pb>i{display:block;height:100%;background:var(--working)}
+.rhead{padding:14px 16px;border-bottom:1px solid var(--line)}
+.rhead .t{display:flex;align-items:center;gap:8px}
+.rhead .t b{font-size:17px}
+.rhead .edit{margin-left:auto}
+.remit{color:var(--muted);font-size:12.5px;margin-top:6px}
+.rstat{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:8px;color:var(--muted)}
+.rstat span{display:inline-flex;align-items:center;gap:5px}
+.team{padding:11px 16px;border-bottom:1px solid var(--line2)}
+.team .th{display:flex;align-items:center;gap:8px}
+.team .th .k{font:600 10.5px/1 var(--f-mono);letter-spacing:.06em;color:var(--muted)}
+.team .th .n{color:var(--faint);font:600 11px/1 var(--f-mono)}
+.team .add{margin-left:auto;color:var(--accent);font-size:12px;cursor:pointer}
+.prow{display:grid;grid-template-columns:10px 1fr auto;gap:3px 9px;align-items:center;margin-top:8px;padding:6px 8px;border-radius:8px;cursor:pointer}
+.prow:hover{background:var(--sunk)}
+.prow.sel{background:color-mix(in srgb,var(--accent) 10%,transparent);outline:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.prow b{font-size:12.5px}
+.prow .mdl{font:11px/1 var(--f-mono);color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+.prow .doing{grid-column:2/4;color:var(--muted);font-size:12px}
+.addteam{margin:12px 16px;width:calc(100% - 32px);border:1px dashed var(--line);background:var(--panel);color:var(--muted);border-radius:10px;padding:9px;font-size:13px;cursor:pointer;font-family:inherit}
+.pcard{padding:14px 16px;border-bottom:1px solid var(--line)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid transparent}
+.pill .dot{width:8px;height:8px}
+.pill.working{color:#0c7566;background:color-mix(in srgb,var(--working) 16%,transparent);border-color:color-mix(in srgb,var(--working) 36%,transparent)}
+.pill.waiting{color:#8a5a00;background:color-mix(in srgb,var(--waiting) 18%,transparent);border-color:color-mix(in srgb,var(--waiting) 40%,transparent)}
+.pill.refused{color:#a51f1f;background:color-mix(in srgb,var(--refused) 16%,transparent);border-color:color-mix(in srgb,var(--refused) 38%,transparent)}
+.pill.idle{color:var(--muted);background:var(--sunk);border-color:var(--line)}
+:root[data-theme="dark"] .pill.working{color:#4ad8c8}:root[data-theme="dark"] .pill.waiting{color:#f2b65a}:root[data-theme="dark"] .pill.refused{color:#f58080}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pill.working{color:#4ad8c8}:root:not([data-theme="light"]) .pill.waiting{color:#f2b65a}:root:not([data-theme="light"]) .pill.refused{color:#f58080}}
+.k{font:600 11px/1 var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+.scr{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--sunk);margin-top:6px}
+.tools2{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip2{font:12px/1 var(--f-mono);padding:4px 8px;border-radius:7px;border:1px solid var(--line);background:var(--sunk);color:var(--muted)}
+.chip2.off{text-decoration:line-through;opacity:.7}
+.chip2.ask{border-color:color-mix(in srgb,var(--waiting) 50%,var(--line));color:var(--waiting)}
+.demo{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;font-size:11px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <span class="logo"><i></i>Elenta Office</span>
+    <span class="sub" id="crumb">Elenta · Main wing</span>
+    <span class="sbadge" id="sbadge"><i></i>Sandbox · locked down</span>
+    <nav class="nav">
+      <a class="on">Office</a><a>Jobs</a><a>Approvals <span class="navb">2</span></a><a>Connectors</a><a>Budgets</a><a>Audit</a><a>Org</a>
+    </nav>
+    <button class="tbtn" id="theme" aria-label="Toggle light or dark theme">◐</button>
+    <span class="kbd">⌘K</span>
+  </div>
+  <div class="main">
+    <div class="col lcol">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--line2)"><span class="eyebrow">Organisation · 17 people</span></div>
+      <div id="orglist"></div>
+      <div class="budget">
+        <span class="eyebrow">This month</span>
+        <div class="spendrow" style="margin-top:8px"><span style="color:var(--muted)">Spend</span><b>$184 / $600</b></div>
+        <div class="bar"><i style="width:31%"></i></div>
+        <div style="color:var(--muted);font-size:12px;margin-top:7px">Military 62% of its budget</div>
+      </div>
+    </div>
+    <div class="col stagewrap" id="stage">
+      <svg id="floor" xmlns="http://www.w3.org/2000/svg" aria-label="Interactive office floor"></svg>
+      <div class="chip tl" id="floorchip"><span class="lead">FLOOR</span>Drag to pan · scroll to zoom · click a room</div>
+      <div class="back" id="backbar" hidden><button class="btn" id="backbtn">← Whole office</button><span class="chip" style="position:static"><span class="lead" id="backname">MILITARY</span></span></div>
+      <div class="tools" id="tools">
+        <button class="btn" id="rotate" aria-label="Rotate 90 degrees">↻ <span id="angle">0°</span></button>
+        <button class="btn" id="motion">Activity</button>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--working)"></i>Working</span>
+        <span><i class="dot" style="background:var(--waiting)"></i>Waiting for you</span>
+        <span><i class="dot" style="background:var(--refused)"></i>Refused / stopped</span>
+        <span><i class="dot" style="background:var(--idle)"></i>Idle</span>
+      </div>
+      <div class="zoom"><button class="btn" id="zout">−</button><button class="btn" id="zin">+</button><button class="btn fit" id="fit">Fit</button></div>
+      <div class="demo">Illustrative floor · sample agent state</div>
+    </div>
+    <div class="col rcol" id="right"></div>
+  </div>
+</div>
+
+<script>
+const ORG={"title":"Elenta","depts":[{"key":"boss","name":"BOSS","group":null,"boss":true,"about":"Reads every incoming request, decides which department owns it and hands it over with a reason.","teams":[{"name":"OFFICE OF THE BOSS","people":[{"id":"chief-of-staff","name":"CHIEF OF STAFF","role":"Keeps the Boss's desk in order","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Drafts short briefs and status notes for the Boss and handles requests that belong to no department"}]}],"lead":{"id":"boss","name":"BOSS","role":"Head of the office","status":"working","model":"Opus","screen":"summary","sprite":"business-finance","task":"Weighs each request against what the departments own and sends it to the one best placed to deliver it"},"count":2},{"key":"intel","name":"INTELLIGENCE","group":"Military","boss":false,"about":"All-source and technical intelligence, cryptology, ISR and reconnaissance, geospatial and environment — staff analysis from supplied or open-source material only.","teams":[{"name":"ALL-SOURCE INTEL (J2)","people":[{"id":"mil-allsource","name":"ALL-SOURCE ANALYST","role":"Fuses reporting into assessments","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Combines supplied reporting into assessments with confidence levels and clearly stated gaps"},{"id":"mil-threat","name":"THREAT ANALYST","role":"Adversary capability and doctrine","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Describes adversary capabilities, doctrine and likely courses of action from supplied and open sources"},{"id":"mil-ci","name":"COUNTER-INTEL & SECURITY","role":"Protective security and OPSEC","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Reviews plans and documents for OPSEC risks and writes protective-security measures"}]},{"name":"TECHNICAL INTEL","people":[{"id":"mil-sigint","name":"SIGINT ANALYST","role":"Signals intelligence analysis","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Analyses supplied signals-intelligence reporting and writes collection requirements and doctrine, using only supplied or open material"},{"id":"mil-masint","name":"MASINT ANALYST","role":"Measurement & signature intel","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Writes doctrine and analysis for radar, acoustic and chemical signatures from supplied data"},{"id":"mil-domex","name":"DOMEX ANALYST","role":"Document & media exploitation","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Writes procedures for exploiting data from documents and media supplied to the office and reports findings"},{"id":"mil-biometrics","name":"BIOMETRICS DOCTRINE ANALYST","role":"Identity and forensic doctrine","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Writes doctrine and training for lawful identity management and forensic exploitation of supplied material"},{"id":"mil-humint","name":"HUMINT DOCTRINE ANALYST","role":"Source handling and lawful questioning doctrine","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Writes HUMINT collection, source-handling and lawful questioning doctrine and training"}]},{"name":"CRYPTOLOGY","people":[{"id":"mil-cryptology","name":"CRYPTOLOGY ANALYST","role":"Cipher strength and crypto requirements","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Studies the strength of cipher systems and writes requirements for friendly cryptographic protocols, using supplied or open material"},{"id":"mil-tscm","name":"TSCM PROCEDURES WRITER","role":"Surveillance countermeasures","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes technical surveillance countermeasures procedures and inspection checklists for friendly facilities"},{"id":"mil-linguist","name":"OPERATIONAL LINGUIST","role":"Translation and terminology","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Translates supplied foreign documents and intercept transcripts and advises on language and terminology"}]},{"name":"ISR & RECCE","people":[{"id":"mil-isr-planner","name":"ISR PLANNER","role":"Collection and recon planning","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Turns information requirements into collection plans, matching tasks to available assets and timings"},{"id":"mil-osint","name":"OSINT ANALYST","role":"Open-source intelligence","status":"working","model":"Haiku","screen":"analysis","sprite":"military-analysis","task":"Works from open-source material in the library, cites every source and grades its reliability"},{"id":"mil-recce-analyst","name":"RECCE ANALYST","role":"Recce and patrol reports","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Structures recce and patrol reports into standard formats and pulls out what answers the requirements"},{"id":"mil-imagery","name":"IMAGERY/GEOINT ANALYST","role":"Interprets supplied imagery","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Describes and compares supplied satellite, aerial and drone imagery, notes changes over time and states what cannot be seen"}]},{"name":"GEOSPATIAL & METOC","people":[{"id":"mil-geo","name":"GEOSPATIAL ANALYST","role":"Terrain and mapping","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Writes terrain analyses (going, cover, key terrain, routes) and specifies map products"},{"id":"mil-metoc","name":"METOC ANALYST","role":"Weather and environment effects","status":"waiting","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Explains how weather, light, sea state and climate affect people, kit and plans"}]}],"lead":{"id":"mil-j2-lead","name":"INTELLIGENCE LEAD","role":"Department lead","status":"working","model":"Opus","screen":"summary","sprite":"military-lead","task":"Splits the department's requests across its sub-teams, checks the pieces fit together and signs off one combined result for the people who decide and act"},"count":18},{"key":"operations","name":"OPERATIONS & PLANS","group":"Military","boss":false,"about":"Current operations, future plans, fire-support coordination doctrine, wargaming and operational research, training and exercises, and the command staff.","teams":[{"name":"COMMAND GROUP","people":[{"id":"mil-deputy","name":"DEPUTY LEAD","role":"Runs the staff battle rhythm","status":"idle","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Keeps the decision log, chases staff products to deadline and stands in for the lead"},{"id":"mil-staff-officer","name":"STAFF OFFICER","role":"Orders, briefs and staff papers","status":"working","model":"Haiku","screen":"summary","sprite":"military-lead","task":"Drafts orders, briefing packs and decision papers in the standard formats"}]},{"name":"OPERATIONS (J3)","people":[{"id":"mil-ops","name":"OPERATIONS OFFICER","role":"Current operations","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes operations orders and fragmentary orders and keeps the current plan coherent"},{"id":"mil-watchkeeper","name":"WATCHKEEPER","role":"Logs and situation reports","status":"idle","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Keeps the operations log and writes SITREPs and handover notes"},{"id":"mil-joint-liaison","name":"JOINT LIAISON OFFICER","role":"Air, land and maritime coordination","status":"working","model":"Haiku","screen":"summary","sprite":"military-lead","task":"Coordinates timings, boundaries and deconfliction between air, land and maritime parts of a plan"},{"id":"mil-fires","name":"FIRE SUPPORT COORDINATION","role":"Fires coordination doctrine","status":"waiting","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes fire-support and close-air-support coordination doctrine and training"}]},{"name":"PLANS (J5)","people":[{"id":"mil-plans","name":"PLANS OFFICER","role":"Future plans and courses of action","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Runs the planning process: mission analysis, courses of action, comparison and recommendation"},{"id":"mil-redteam","name":"RED TEAM ANALYST","role":"Challenges our own plans","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Looks for weak assumptions, blind spots and how an adversary would exploit our plans"}]},{"name":"WARGAMING & OR","people":[{"id":"mil-wargame","name":"WARGAME DESIGNER","role":"Designs wargames","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Designs seminar, matrix and board wargames: aims, rules, turn structure, roles and data collection"},{"id":"mil-adjudicator","name":"WARGAME ADJUDICATOR","role":"White cell and adjudication","status":"idle","model":"Haiku","screen":"analysis","sprite":"military-analysis","task":"Writes adjudication rules, runs the white cell and records outcomes and insights"},{"id":"mil-or","name":"OPERATIONAL RESEARCH ANALYST","role":"Modelling and measures","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Builds models and simulations, defines measures of effectiveness and performance and analyses results"}]},{"name":"TRAINING & EXERCISES (J7)","people":[{"id":"mil-exercise","name":"EXERCISE PLANNER","role":"Exercise design and control","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Designs exercises: objectives, scenario, injects, control arrangements and evaluation"},{"id":"mil-training","name":"TRAINING DESIGNER","role":"Courses and training material","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes training-needs analyses, courses, lesson plans and assessments"},{"id":"mil-lessons","name":"LESSONS LEARNED ANALYST","role":"Captures and tracks lessons","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Turns observations into lessons, tracks actions and spots repeat problems"}]}],"lead":{"id":"mil-j3-lead","name":"OPERATIONS LEAD","role":"Department lead","status":"working","model":"Opus","screen":"summary","sprite":"military-lead","task":"Splits the department's requests across its sub-teams, checks the pieces fit together and signs off one combined result for the people who decide and act"},"count":15},{"key":"information","name":"INFORMATION & CIVIL-MIL","group":"Military","boss":false,"about":"Information operations and PSYOP doctrine, truthful public affairs and communication products, and civil-military and cultural liaison — truthful or EXERCISE-only.","teams":[{"name":"INFO OPS & PSYOP","people":[{"id":"mil-influence","name":"INFLUENCE DOCTRINE ANALYST","role":"Information-operations doctrine","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes information-operations doctrine and training and reviews products for legality and truthfulness"},{"id":"mil-mildec","name":"MILITARY DECEPTION PLANNER","role":"Deception doctrine for exercises","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes military-deception doctrine and designs deception serials for marked EXERCISES only, never against real forces"},{"id":"mil-audience","name":"AUDIENCE RESEARCH ANALYST","role":"Communication and audience methods","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Studies communication and audience-analysis methods for lawful public information"},{"id":"mil-pao","name":"PUBLIC AFFAIRS OFFICER","role":"Official public communication","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Drafts truthful public statements, media lines and internal communications"},{"id":"mil-multimedia","name":"COMMUNICATION PRODUCTS WRITER","role":"Public-information products","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Drafts truthful radio, print and digital public-information products"}]},{"name":"CIVIL-MILITARY (J9)","people":[{"id":"mil-cimic","name":"CIVIL-MILITARY LIAISON","role":"Civil authorities and agencies","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Plans coordination with civil authorities, agencies and the local population"},{"id":"mil-cultural","name":"CULTURAL ADVISER","role":"Local cultural dynamics","status":"waiting","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Advises on local cultural, religious and tribal dynamics from open sources to support lawful engagement"}]}],"lead":{"id":"mil-io-lead","name":"INFORMATION OPS LEAD","role":"Department lead","status":"working","model":"Opus","screen":"summary","sprite":"military-lead","task":"Splits the department's requests across its sub-teams, checks the pieces fit together and signs off one combined result for the people who decide and act"},"count":8},{"key":"cyber","name":"CYBER, EW & SPACE","group":"Military","boss":false,"about":"Defensive cyber and authorised adversary emulation, communications and information systems, electronic warfare and spectrum, and space support — defence only.","teams":[{"name":"CYBER DEFENCE (J6)","people":[{"id":"mil-cyber","name":"NETWORK DEFENCE ANALYST","role":"Defensive cyber","status":"working","model":"Sonnet","screen":"code","sprite":"military-software","task":"Hardens systems, writes monitoring and incident-response procedures and security assurance cases"},{"id":"mil-redcyber","name":"ADVERSARY EMULATION ANALYST","role":"Authorised red-team assessment","status":"working","model":"Haiku","screen":"code","sprite":"military-software","task":"Runs authorised red-team and adversary-emulation assessments on supplied or lab systems to find and fix weaknesses"},{"id":"mil-cis","name":"CIS PLANNER","role":"Communications and information systems","status":"idle","model":"Sonnet","screen":"code","sprite":"military-software","task":"Writes communications plans, network diagrams and information-management plans"}]},{"name":"ELECTRONIC WARFARE","people":[{"id":"mil-ea","name":"ELECTRONIC ATTACK DOCTRINE","role":"EA doctrine and effects","status":"refused","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes electronic-attack doctrine and training and analyses jamming effects in EXERCISE scenarios"},{"id":"mil-ep","name":"ELECTRONIC PROTECTION ANALYST","role":"Protect friendly frequencies","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes electronic-protection measures to keep friendly frequencies robust against jamming"},{"id":"mil-es","name":"EW SUPPORT ANALYST","role":"Detect and geolocate signals","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes doctrine and analysis for detecting and geolocating signals from supplied data"},{"id":"mil-spectrum","name":"SPECTRUM MANAGER","role":"Frequencies and EMC","status":"waiting","model":"Haiku","screen":"summary","sprite":"military-lead","task":"Plans frequency allocation and checks electromagnetic compatibility between systems"}]},{"name":"SPACE OPERATIONS","people":[{"id":"mil-space","name":"SPACE OPERATIONS PLANNER","role":"Space support doctrine and plans","status":"refused","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes doctrine and plans for satellite communications, missile-warning and positioning/navigation/timing support"}]}],"lead":{"id":"mil-j6-lead","name":"CYBER & EW LEAD","role":"Department lead","status":"working","model":"Opus","screen":"summary","sprite":"military-lead","task":"Splits the department's requests across its sub-teams, checks the pieces fit together and signs off one combined result for the people who decide and act"},"count":9},{"key":"warfare","name":"WARFARE DOCTRINE","group":"Military","boss":false,"about":"Land, aviation and maritime warfare written as doctrine, training, procedures and EXERCISE simulations only — no real operations, fire missions or strike tasking.","teams":[{"name":"LAND WARFARE DOCTRINE","people":[{"id":"mil-infantry","name":"INFANTRY DOCTRINE ANALYST","role":"Small-unit tactics","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes infantry doctrine, training and small-unit tactical analysis"},{"id":"mil-armour","name":"ARMOURED WARFARE DOCTRINE","role":"Armour and mechanised","status":"idle","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes armoured and mechanised doctrine, training and tactical analysis"},{"id":"mil-artillery","name":"FIRES DOCTRINE ANALYST","role":"Artillery and rockets","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes field-artillery and rocket doctrine and training and models fires effects in EXERCISES"},{"id":"mil-airdef","name":"AIR DEFENCE DOCTRINE","role":"Air and missile defence","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes air- and missile-defence doctrine, training and engagement-sequence analysis for EXERCISES"},{"id":"mil-sapper","name":"COMBAT ENGINEERING DOCTRINE","role":"Mobility and survivability","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes doctrine and training for breaching, bridging, obstacle clearance and survivability tasks"},{"id":"mil-recondoc","name":"RECONNAISSANCE DOCTRINE","role":"Scouting and observation","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes doctrine and training for scouting, observation and marksmanship"},{"id":"mil-sof","name":"SPECIAL OPERATIONS DOCTRINE","role":"Unconventional warfare doctrine","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes special-operations and unconventional-warfare doctrine and training at the unclassified level"}]},{"name":"AVIATION DOCTRINE","people":[{"id":"mil-atc","name":"AIR TRAFFIC CONTROL PROCEDURES","role":"Airspace and ATC","status":"idle","model":"Haiku","screen":"documentation","sprite":"military-documentation","task":"Writes air-traffic-control and airspace-management procedures and training"},{"id":"mil-fixedwing","name":"FIXED-WING TACTICS ANALYST","role":"Fast-jet employment","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes fixed-wing employment doctrine, training and tactics analysis"},{"id":"mil-rotary","name":"ROTARY-WING TACTICS ANALYST","role":"Helicopter employment","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes helicopter employment doctrine and training (transport, attack, medical evacuation)"},{"id":"mil-rpa","name":"RPA DOCTRINE ANALYST","role":"Unmanned aircraft","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes unmanned-aircraft doctrine and training for surveillance and support"},{"id":"mil-wso","name":"WEAPON SYSTEMS DOCTRINE","role":"Airborne systems doctrine","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes doctrine and training for airborne targeting and weapon-systems operation"},{"id":"mil-aircrew","name":"AIRCREW PROCEDURES WRITER","role":"Aircrew and in-flight procedures","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes aircrew and in-flight maintenance procedures and checklists"}]},{"name":"MARITIME DOCTRINE","people":[{"id":"mil-surface","name":"SURFACE WARFARE DOCTRINE","role":"Surface fleet","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes surface-warfare doctrine, training and shipboard-systems analysis"},{"id":"mil-subsurface","name":"SUBSURFACE WARFARE DOCTRINE","role":"Submarine and ASW","status":"refused","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes submarine and anti-submarine doctrine, training and sonar-analysis methods"},{"id":"mil-amphibious","name":"AMPHIBIOUS OPERATIONS DOCTRINE","role":"Ship-to-shore","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Writes ship-to-shore and amphibious doctrine and training"}]}],"lead":{"id":"mil-doctrine-lead","name":"WARFARE DOCTRINE LEAD","role":"Department lead","status":"working","model":"Opus","screen":"summary","sprite":"military-lead","task":"Splits the department's requests across its sub-teams, checks the pieces fit together and signs off one combined result for the people who decide and act"},"count":17},{"key":"logistics","name":"LOGISTICS & ENGINEERING","group":"Military","boss":false,"about":"Sustainment and supply-chain planning, movements and transport, fuels, aerial delivery and field feeding, and engineering and maintenance doctrine.","teams":[{"name":"LOGISTICS (J4)","people":[{"id":"mil-log-planner","name":"LOGISTICS PLANNER","role":"Sustainment planning","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes sustainment plans: supply, fuel, stocks, maintenance and medical resupply"},{"id":"mil-quartermaster","name":"SUPPLY CHAIN ANALYST","role":"Global distribution and stocks","status":"working","model":"Haiku","screen":"summary","sprite":"military-lead","task":"Plans global distribution and stock management of equipment and matériel"},{"id":"mil-movements","name":"MOVEMENTS PLANNER","role":"Deployment and transport","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Plans moves, loads and lift, and writes movement tables"},{"id":"mil-transport","name":"TRANSPORT OPERATIONS PLANNER","role":"Road moves and convoys","status":"working","model":"Haiku","screen":"summary","sprite":"military-lead","task":"Plans road moves, convoys and load tables"},{"id":"mil-fuels","name":"FUELS SUPPLY ANALYST","role":"Fuel testing and distribution","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes fuel testing, storage and distribution procedures and models consumption"},{"id":"mil-rigger","name":"AERIAL DELIVERY PROCEDURES","role":"Airdrop procedures","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes parachute packing, inspection and aerial-delivery procedures"},{"id":"mil-feeding","name":"FIELD FEEDING PLANNER","role":"Field catering and rations","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Plans field catering and ration supply to sustain large numbers of personnel"}]},{"name":"ENGINEERING & MAINTENANCE","people":[{"id":"mil-ordnance","name":"ORDNANCE SAFETY ANALYST","role":"Ammunition and explosives safety","status":"working","model":"Sonnet","screen":"code","sprite":"military-software","task":"Writes ammunition and explosives storage, handling and transport safety procedures"},{"id":"mil-avmaint","name":"AVIATION MAINTENANCE ANALYST","role":"Aircraft maintenance","status":"idle","model":"Sonnet","screen":"code","sprite":"military-software","task":"Writes aircraft maintenance procedures and reliability and availability analysis"},{"id":"mil-vehmaint","name":"VEHICLE MAINTENANCE ANALYST","role":"Armoured-vehicle maintenance","status":"working","model":"Sonnet","screen":"code","sprite":"military-software","task":"Writes armoured-vehicle maintenance doctrine and availability analysis"}]}],"lead":{"id":"mil-j4-lead","name":"LOGISTICS LEAD","role":"Department lead","status":"working","model":"Opus","screen":"summary","sprite":"military-lead","task":"Splits the department's requests across its sub-teams, checks the pieces fit together and signs off one combined result for the people who decide and act"},"count":11},{"key":"capability","name":"CAPABILITY & TECHNICAL","group":"Military","boss":false,"about":"Capability development, defence science and systems analysis, software and systems engineering, test and evaluation, and documentation.","teams":[{"name":"CAPABILITY (J8)","people":[{"id":"mil-capability","name":"CAPABILITY PLANNER","role":"Capability gaps and roadmaps","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Maps capability gaps across people, training, equipment and doctrine and writes roadmaps"},{"id":"mil-req-analyst","name":"REQUIREMENTS ANALYST","role":"Requirements and traceability","status":"working","model":"Haiku","screen":"analysis","sprite":"military-analysis","task":"Writes clear, testable requirements and keeps traceability between requirements, design and tests"},{"id":"mil-cost","name":"COST ANALYST","role":"Through-life cost","status":"working","model":"Sonnet","screen":"analysis","sprite":"military-analysis","task":"Estimates through-life costs and compares options on cost and risk"}]},{"name":"SCIENCE & TECHNOLOGY","people":[{"id":"mil-sys-analyst","name":"SYSTEMS ANALYST","role":"Whole-system view","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Studies interfaces, failure modes and performance budgets, and states assumptions openly"},{"id":"mil-scientist","name":"DEFENCE SCIENTIST","role":"Technology scanning","status":"working","model":"Haiku","screen":"summary","sprite":"military-lead","task":"Scans emerging technology, judges maturity (TRL) and writes technical assessments"},{"id":"mil-human-factors","name":"HUMAN FACTORS SPECIALIST","role":"People and system design","status":"waiting","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Assesses workload, usability and training burden of systems and procedures"}]},{"name":"SOFTWARE & SYSTEMS","people":[{"id":"mil-sw-engineer","name":"SOFTWARE ENGINEER","role":"Writes and reviews code","status":"working","model":"Sonnet","screen":"code","sprite":"military-software","task":"Designs modules, writes code and unit tests, and reviews changes against the code-review checklist"},{"id":"mil-firmware","name":"FIRMWARE DEVELOPER","role":"Low-level device software","status":"idle","model":"Sonnet","screen":"code","sprite":"military-software","task":"Works on drivers, timing, storage and power behaviour of embedded devices such as data loggers"},{"id":"mil-integration","name":"INTEGRATION ENGINEER","role":"Interfaces and integration","status":"working","model":"Sonnet","screen":"code","sprite":"military-software","task":"Writes interface control documents and integration plans between systems"}]},{"name":"TEST & EVALUATION","people":[{"id":"mil-test-engineer","name":"TEST ENGINEER","role":"Plans and specifies verification","status":"working","model":"Sonnet","screen":"code","sprite":"military-software","task":"Writes test plans, test cases and acceptance criteria, using the test-plan template"},{"id":"mil-tande","name":"T&E MANAGER","role":"Test and evaluation strategy","status":"working","model":"Sonnet","screen":"code","sprite":"military-software","task":"Writes the T&E strategy and master plan and judges whether results meet requirements"},{"id":"mil-safety","name":"SYSTEM SAFETY ENGINEER","role":"Safety cases and hazards","status":"working","model":"Sonnet","screen":"code","sprite":"military-software","task":"Runs hazard analyses and writes safety cases and safety assessments"}]},{"name":"DOCUMENTATION","people":[{"id":"mil-writer","name":"TECHNICAL WRITER","role":"Clear documents","status":"working","model":"Haiku","screen":"documentation","sprite":"military-documentation","task":"Writes manuals, plans and reports in house style using the document template"},{"id":"mil-config","name":"CONFIGURATION MANAGER","role":"Baselines under control","status":"working","model":"Sonnet","screen":"documentation","sprite":"military-documentation","task":"Assigns document numbers, tracks versions and keeps change records consistent"}]}],"lead":{"id":"mil-cap-lead","name":"CAPABILITY & TECH LEAD","role":"Department lead","status":"working","model":"Opus","screen":"summary","sprite":"military-lead","task":"Splits the department's requests across its sub-teams, checks the pieces fit together and signs off one combined result for the people who decide and act"},"count":15},{"key":"support","name":"PERSONNEL, MED & LEGAL","group":"Military","boss":false,"about":"Personnel and HR, medical and veterinary and chaplaincy, and legal, military police and compliance — all under the law of armed conflict and applicable law.","teams":[{"name":"PERSONNEL (J1)","people":[{"id":"mil-personnel","name":"PERSONNEL OFFICER","role":"Manning, welfare and personnel admin","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes manning plans, establishment tables and personnel and welfare procedures"},{"id":"mil-hr","name":"HR SPECIALIST","role":"Records, promotions and deployments","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes procedures for records, promotions, deployments and pay administration"}]},{"name":"MEDICAL","people":[{"id":"mil-medofficer","name":"MEDICAL OFFICER","role":"Clinical guidance","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes clinical guidance and field-hospital procedures"},{"id":"mil-medic","name":"TRAUMA CARE TRAINER","role":"Battlefield trauma care","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes battlefield trauma-care training and casualty-handling procedures"},{"id":"mil-nurse","name":"NURSING COORDINATOR","role":"Patient care coordination","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes patient-care and medical-evacuation coordination procedures"},{"id":"mil-flightsurgeon","name":"AEROMEDICAL ADVISER","role":"Aircrew health","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes aeromedical and aircrew-health guidance and fitness standards"},{"id":"mil-medplanner","name":"MEDICAL PLANNER","role":"Health support planning","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes medical support plans: treatment chain, evacuation timelines and force-health protection"},{"id":"mil-vet","name":"VETERINARY ADVISER","role":"Working dogs and animals","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes care guidance for military working dogs and pack animals"},{"id":"mil-chaplain","name":"CHAPLAINCY & WELFARE ADVISER","role":"Pastoral care and welfare","status":"working","model":"Sonnet","screen":"summary","sprite":"military-lead","task":"Writes pastoral-care, welfare and moral-support guidance for personnel of all faiths and none"}]},{"name":"LEGAL, POLICE & COMPLIANCE","people":[{"id":"mil-legal","name":"LEGAL ADVISER (JAG)","role":"Law of armed conflict and ROE","status":"working","model":"Sonnet","screen":"list","sprite":"military-compliance","task":"Reviews plans against the law of armed conflict and rules of engagement and flags questions for a qualified lawyer"},{"id":"mil-mp","name":"MILITARY POLICE DOCTRINE","role":"Policing and detainee handling","status":"working","model":"Haiku","screen":"list","sprite":"military-compliance","task":"Writes military-police, base-security and detainee-handling doctrine consistent with the law"},{"id":"mil-cid","name":"CRIMINAL INVESTIGATION ANALYST","role":"Military investigations","status":"working","model":"Sonnet","screen":"list","sprite":"military-compliance","task":"Writes military criminal-investigation procedures and reviews case documentation"},{"id":"mil-export","name":"EXPORT CONTROL OFFICER","role":"Export screening","status":"working","model":"Sonnet","screen":"list","sprite":"military-compliance","task":"Checks deliverables against the export-screening checklist and flags anything that needs a licence review"},{"id":"mil-qa","name":"QUALITY ASSURANCE","role":"Quality checks","status":"working","model":"Sonnet","screen":"list","sprite":"military-compliance","task":"Checks deliverables against standards and the quality checklist before sign-off"}]}],"lead":{"id":"mil-support-lead","name":"PERSONNEL & SUPPORT LEAD","role":"Department lead","status":"working","model":"Opus","screen":"summary","sprite":"military-lead","task":"Splits the department's requests across its sub-teams, checks the pieces fit together and signs off one combined result for the people who decide and act"},"count":15},{"key":"business","name":"BUSINESS","group":"Business","boss":false,"about":"Owns the running of the company: money, contracts, purchasing and office administration.","teams":[{"name":"FINANCE","people":[{"id":"biz-accountant","name":"ACCOUNTANT","role":"Books, invoices and payments","status":"working","model":"Sonnet","screen":"summary","sprite":"business-finance","task":"Prepares invoices, checks payments and keeps the books tidy using the invoice checklist"},{"id":"biz-fin-analyst","name":"FINANCIAL ANALYST","role":"Budgets and forecasts","status":"working","model":"Haiku","screen":"summary","sprite":"business-finance","task":"Builds budgets, cost estimates and simple forecasts, and explains the numbers in plain words"}]},{"name":"CONTRACTS","people":[{"id":"biz-contracts","name":"CONTRACTS MANAGER","role":"Drafts and reviews agreements","status":"working","model":"Haiku","screen":"summary","sprite":"business-documents","task":"Reviews contract terms against the contract review checklist and drafts plain-language summaries"}]},{"name":"ADMIN","people":[{"id":"biz-office-manager","name":"OFFICE MANAGER","role":"Keeps the office running","status":"working","model":"Haiku","screen":"summary","sprite":"business-documents","task":"Handles purchasing, schedules, records and supplier contacts"}]}],"lead":{"id":"biz-lead","name":"BUSINESS LEAD","role":"Head of business operations","status":"working","model":"Opus","screen":"summary","sprite":"business-documents","task":"Splits business requests across finance, contracts and admin and delivers one combined answer"},"count":5}],"total":115};
+const NS='http://www.w3.org/2000/svg';
+const C={working:'#14B8A6',waiting:'#F59E0B',refused:'#EF4444',idle:'#9CA3AF'};
+const DEPTCOL={command:'--cmd',business:'--biz',library:'--lib'};
+const groupColVar=g=>g==='Military'?'--mil':g==='Business'?'--biz':'--cmd';
+const groupFillVar=g=>g==='Military'?'--mil-fill':g==='Business'?'--biz-fill':'--cmd-fill';
+// index
+const DEPT={}; ORG.depts.forEach(d=>DEPT[d.key]=d);
+function deptPeople(d){const o=[];if(d.lead)o.push({...d.lead,team:'Lead',isLead:true});for(const t of d.teams)for(const p of t.people)o.push({...p,team:t.name});return o;}
+const GROUPS={}; ORG.depts.forEach(d=>{const g=d.boss?'Command':(d.group||'Business');(GROUPS[g]??=[]).push(d.key);});
+const groupDepts=g=>GROUPS[g].map(k=>DEPT[k]);
+const groupPeople=g=>groupDepts(g).flatMap(deptPeople);
+const byId={}; ORG.depts.forEach(d=>deptPeople(d).forEach(p=>byId[d.key+':'+p.id]=({...p,dept:d.key})));
+const cnt=(ppl,s)=>ppl.filter(p=>p.status===s).length;
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();
+const monthName=()=>["January","February","March","April","May","June","July","August","September","October","November","December"][new Date().getMonth()];
+
+let level='office', curGroup='Military', curDept='intel', selected=null, angle=0, motion=true, zoom=1, pan={x:0,y:0}, drag=null;
+const floor=document.getElementById('floor');
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function node(tag,a={},p=floor){const n=document.createElementNS(NS,tag);for(const k in a)n.setAttribute(k,a[k]);p.append(n);return n}
+function pos(x,y){const a=angle*Math.PI/180,xx=x*Math.cos(a)-y*Math.sin(a),yy=x*Math.sin(a)+y*Math.cos(a);return {x:(xx-yy)*34,y:(xx+yy)*17}}
+function roomRect(x,y,w,h,colVar,fillVar,cls,data){const g=node('g',cls?{class:cls,...data}:{});
+  const pts=[[x,y],[x+w,y],[x+w,y+h],[x,y+h]].map(a=>pos(...a));
+  node('polygon',{points:pts.map(p=>p.x.toFixed(1)+','+p.y.toFixed(1)).join(' '),fill:cssv(fillVar),stroke:cssv(colVar),'stroke-width':2.4,'stroke-opacity':.85},g);
+  return g;}
+function worker(parent,x,y,p,big){const P=pos(x,y);const g=node('g',{class:'worker'+(selected===(p.dept+':'+p.id)?' sel':''),tabindex:0,role:'button','data-id':p.dept+':'+p.id,'aria-label':p.name+', '+p.status},parent);
+  const sc=big?1:0.82;
+  node('ellipse',{cx:P.x-18*sc,cy:P.y+3,rx:(selected===(p.dept+':'+p.id)?27:23)*sc,ry:(selected===(p.dept+':'+p.id)?13:11)*sc,fill:'none',stroke:C[p.status],'stroke-width':selected===(p.dept+':'+p.id)?4:3},g);
+  const src=(/^mil|^intel|^operations|^information|^cyber|^warfare|^logistics|^capability|^support/.test(p.dept)&&angle!==0)?'directions/occupied-angle-'+(angle/90)+'.png':'workstations/'+p.sprite+'.png';
+  node('image',{href:src,x:P.x-57*sc,y:P.y-105*sc,width:114*sc,height:112*sc},g);
+  if(p.status==='waiting'||p.status==='refused')node('image',{href:'vector/marker-'+(p.status==='waiting'?'question':'stop')+'.svg',x:P.x-15*sc,y:P.y-(132*sc),width:35*sc,height:26*sc},g);
+  else if(p.status==='working'&&motion)node('image',{href:'vector/marker-typing.svg',x:P.x-13*sc,y:P.y-127*sc,width:26*sc,height:22*sc,class:'bubble'},g);
+  g.onclick=e=>{e.stopPropagation();pickWorker(p.dept+':'+p.id);};g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickWorker(p.dept+':'+p.id);}}
+}
+// cluster a department's people by sub-team into a compact region at origin (ox,oy); returns {positions,labels,w,h}
+function deptClusters(d,ox,oy){const teams=[];if(d.lead)teams.push({name:'Lead',people:[{...d.lead,isLead:true,dept:d.key}]});
+  for(const t of d.teams)teams.push({name:t.name,people:t.people.map(p=>({...p,dept:d.key}))});
+  const cpr=Math.min(3,Math.ceil(Math.sqrt(teams.length)));const cellW=5.2,cellH=4.6;const positions=[],labels=[];let maxCol=0,maxRow=0;
+  teams.forEach((t,i)=>{const col=i%cpr,row=Math.floor(i/cpr);maxCol=Math.max(maxCol,col);maxRow=Math.max(maxRow,row);
+    const bx=ox+col*cellW,by=oy+row*cellH;
+    t.people.forEach((p,j)=>{const px=bx+(j%3)*1.55,py=by+Math.floor(j/3)*1.75;positions.push({p,x:px,y:py});});
+    labels.push({x:bx+Math.min(t.people.length,3)*0.75-0.7,y:by-0.5,team:t.name,n:t.people.length,lead:t.name==='Lead'});});
+  return {positions,labels,w:(maxCol+1)*cellW,h:(maxRow+1)*cellH};
+}
+
+let overlay=[];
+function draw(){floor.replaceChildren();overlay=[];
+  if(level==='office')drawOffice();
+  else if(level==='group')drawGroup();
+  else drawDept();
+  const box=floor.getBBox();const w=box.width+90,h=box.height+100;
+  floor.setAttribute('viewBox',`${box.x-45+pan.x} ${box.y-55+pan.y} ${w/zoom} ${h/zoom}`);
+  floor.setAttribute('preserveAspectRatio','xMidYMid meet');placeOverlay();
+}
+function drawOffice(){
+  // Command top-left, Business bottom-left, Military group big right
+  const cmd=DEPT['boss'];const cc=deptClusters(cmd,0.6,1.0);
+  roomRect(0,0,cc.w+1.2,cc.h+1.6,DEPTCOL.command,'--cmd-fill','room',{'data-dept':'boss'});
+  cc.positions.sort((a,b)=>(a.y-b.y)).forEach(o=>worker(floor,o.x,o.y,o.p,true));
+  overlay.push({kind:'room',x:(cc.w+1.2)/2,y:-0.1,name:'COMMAND',meta:'Boss · Chief of staff',col:'--cmd'});
+  const biz=DEPT['business'];const bc=deptClusters(biz,0.6,0.9);const boy=cc.h+3.2;
+  roomRect(0,boy-0.3,bc.w+1.2,bc.h+1.6,DEPTCOL.business,'--biz-fill','room',{'data-dept':'business'});
+  bc.positions.sort((a,b)=>(a.y-b.y)).forEach(o=>worker(floor,o.x,o.y+boy,o.p,true));
+  overlay.push({kind:'room',x:(bc.w+1.2)/2,y:boy-0.4,name:'BUSINESS',meta:biz.count+' people · '+biz.teams.length+' sub-teams',col:'--biz'});
+  // Military group block on the right
+  const gx=Math.max(cc.w,bc.w)+2.4, mp=groupPeople('Military');
+  const mw=10, mh=11;
+  roomRect(gx,0,mw,mh,'--mil','--mil-fill','room',{'data-group':'Military'});
+  // 8 dept mini-tiles inside with a representative sprite each
+  // representative workers scattered in the group room (click the room to open the 8 departments)
+  const mds=groupDepts('Military');
+  mds.forEach((d,i)=>{const col=i%4,row=Math.floor(i/4);const tx=gx+1.4+col*2.3,ty=2.0+row*4.4;
+    const rep=deptPeople(d).find(x=>!x.isLead)||deptPeople(d)[0];worker(floor,tx,ty,{...rep},false);});
+  const ms=statusSummary(mp);
+  overlay.push({kind:'room',x:gx+mw/2,y:-0.3,name:'MILITARY',meta:'8 departments · '+mp.length+' people · '+ms.working+' working',col:'--mil'});
+}
+function statusSummary(ppl){return {working:cnt(ppl,'working'),waiting:cnt(ppl,'waiting'),refused:cnt(ppl,'refused'),idle:cnt(ppl,'idle')};}
+function drawGroup(){const mds=groupDepts(curGroup);
+  mds.forEach((d,i)=>{const col=i%4,row=Math.floor(i/4);const rx=col*6.2,ry=row*6.0;
+    roomRect(rx,ry,5.4,5.0,'--mil','--mil-fill','room',{'data-dept':d.key});
+    const ppl=deptPeople(d).slice(0,6);ppl.forEach((p,j)=>{const px=rx+0.9+(j%3)*1.5,py=ry+1.3+Math.floor(j/3)*2.0;worker(floor,px,py,p,false);});
+    overlay.push({kind:'tile',x:rx+2.7,y:ry-0.1,name:d.name,n:d.count,col:'--mil',status:statusSummary(deptPeople(d))});});
+}
+function drawDept(){const d=DEPT[curDept];const col=DEPTCOL[curDept]||'--mil',fill=(curDept==='business')?'--biz-fill':(curDept==='boss')?'--cmd-fill':'--mil-fill';
+  const cl=deptClusters(d,0.8,1.2);
+  roomRect(0,0,cl.w+1.4,cl.h+2.0,col,fill,'');
+  cl.positions.sort((a,b)=>(a.y-b.y)).forEach(o=>worker(floor,o.x,o.y,o.p,true));
+  cl.labels.forEach(L=>overlay.push({kind:'team',x:L.x,y:L.y,team:L.team,n:L.n,lead:L.lead}));
+}
+// HTML overlay labels
+const ov=document.createElement('div');ov.style.cssText='position:absolute;inset:0;pointer-events:none';document.getElementById('stage').appendChild(ov);
+function svgClient(sx,sy){const m=floor.getScreenCTM();const q=floor.createSVGPoint();q.x=sx;q.y=sy;const r=q.matrixTransform(m);const b=document.getElementById('stage').getBoundingClientRect();return {x:r.x-b.left,y:r.y-b.top};}
+function dots(s){return ['working','waiting','refused','idle'].filter(k=>s[k]).map(k=>`<span style="display:inline-flex;align-items:center;gap:3px;color:var(--muted)"><span style="width:7px;height:7px;border-radius:50%;background:var(--${k})"></span>${s[k]}</span>`).join('<span style="color:var(--line)">·</span>');}
+function placeOverlay(){ov.innerHTML='';for(const L of overlay){const c=pos(L.x,L.y);const pt=svgClient(c.x,c.y);const d=document.createElement('div');
+  d.style.cssText=`position:absolute;left:${pt.x}px;top:${pt.y}px;transform:translate(-50%,-115%);white-space:nowrap`;
+  if(L.kind==='room'||L.kind==='grouphdr'){d.innerHTML=`<div style="background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:5px 9px;box-shadow:0 4px 12px rgba(20,25,35,.1)"><div style="display:flex;align-items:center;gap:7px;font:600 12px/1 var(--f-sans)"><span style="width:10px;height:10px;border-radius:3px;background:var(${L.col})"></span>${L.name}</div><div style="font:500 11px/1 var(--f-sans);color:var(--muted);margin-top:4px">${L.meta}</div></div>`;}
+  else if(L.kind==='tile'){d.innerHTML=`<div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 8px;box-shadow:0 3px 10px rgba(20,25,35,.1)"><div style="display:flex;align-items:center;gap:6px;font:600 11px/1 var(--f-mono);letter-spacing:.03em"><span style="width:8px;height:8px;border-radius:2px;background:var(${L.col})"></span>${L.name} <span style="color:var(--faint)">${L.n}</span></div><div style="display:flex;gap:6px;font:11px/1 var(--f-sans);margin-top:4px">${dots(L.status)}</div></div>`;}
+  else{d.innerHTML=`<div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 9px;box-shadow:0 3px 10px rgba(20,25,35,.1);font:600 10.5px/1 var(--f-mono);letter-spacing:.04em;display:flex;align-items:center;gap:7px">${L.lead?'<span style="color:var(--waiting)">★</span>':''}${L.team.toUpperCase()}${L.n>1?` <span style="color:var(--faint)">${L.n}</span>`:''}</div>`;}
+  ov.appendChild(d);}
+}
+// clicks on empty rooms
+floor.addEventListener('click',e=>{if(drag&&drag.moved)return;const r=e.target.closest('.room');if(!r)return;
+  if(r.dataset.group)openGroup(r.dataset.group);else if(r.dataset.dept)openDept(r.dataset.dept);});
+
+// nav
+function openOffice(){level='office';selected=null;zoom=1;pan={x:0,y:0};render();}
+function openGroup(g){level='group';curGroup=g;selected=null;zoom=1;pan={x:0,y:0};render();}
+function openDept(k){level='dept';curDept=k;curGroup=DEPT[k].boss?'Command':(DEPT[k].group||'Business');selected=null;zoom=1;pan={x:0,y:0};render();}
+function pickWorker(id){const p=byId[id];selected=id;if(level==='office'||level==='group'){openDept(p.dept);selected=id;}render();}
+function back(){if(level==='dept'){const g=DEPT[curDept].group;if(g==='Military')openGroup('Military');else openOffice();}else openOffice();}
+
+// sidebar
+function renderSidebar(){const ol=document.getElementById('orglist');ol.innerHTML='';
+  const rows=[['Command','boss'],['Military','group'],['Business','business']];
+  for(const [name,kind] of rows){let ppl,col,sub,count,on;
+    if(kind==='group'){ppl=groupPeople('Military');col='--mil';sub='8 departments';count=ppl.length;on=(level==='group'&&curGroup==='Military')||(level==='dept'&&DEPT[curDept].group==='Military');}
+    else{const d=DEPT[kind];ppl=deptPeople(d);col=DEPTCOL[kind];sub=d.teams.map(t=>cap(t.name)).slice(0,3).join(' · ');count=ppl.length;on=(level==='dept'&&curDept===kind);}
+    const b=document.createElement('button');b.className='deptcard'+(on?' on':'');
+    b.innerHTML=`<div class="dc-top"><span class="sq" style="background:var(${col})"></span><span class="dc-name">${name.toUpperCase()}</span><span class="dc-count">${count}</span></div>
+      <div class="dc-sub">${sub}</div>
+      <div class="dc-stat"><span><span class="dot" style="background:var(--working)"></span>${cnt(ppl,'working')} working</span><span style="color:#92610e"><span class="dot" style="background:var(--waiting)"></span>${cnt(ppl,'waiting')} waiting</span></div>`;
+    b.onclick=()=>{kind==='group'?openGroup('Military'):openDept(kind);};ol.appendChild(b);}
+}
+const scr={code:'software',documentation:'documentation',analysis:'analysis',list:'compliance',summary:'summary'};
+function renderPanel(){const right=document.getElementById('right');
+  if(level==='office'){right.innerHTML=officePanel();bindOffice();return;}
+  if(level==='group'){right.innerHTML=groupPanel();right.querySelectorAll('.prow').forEach(el=>el.onclick=()=>openDept(el.dataset.key));return;}
+  // dept
+  const d=DEPT[curDept];const ppl=deptPeople(d);const s=statusSummary(ppl);const dotf=k=>`<span class="dot" style="background:var(--${k})"></span>`;
+  const sel=selected?byId[selected]:null;let personCard='';
+  if(sel){const st={working:'Working',waiting:'Waiting for you',refused:'Refused / stopped',idle:'Idle'}[sel.status];
+    personCard=`<div class="pcard"><div class="row" style="gap:9px"><span class="pill ${sel.status}"><span class="dot"></span>${st}</span><span class="k">${sel.team.toUpperCase()}</span></div>
+      <div style="font-size:17px;font-weight:600;margin-top:7px">${sel.name}</div><div style="color:var(--muted);font-size:12.5px">${sel.role||''}</div>
+      <div class="k" style="margin-top:11px">Doing now</div><div style="font-size:13px;margin-top:3px">${sel.task||sel.role||'—'}</div>
+      <img class="scr" src="vector/screen-${scr[sel.screen]||'summary'}.svg" alt="screen" style="max-height:120px;object-fit:contain">
+      <div class="row" style="margin-top:9px;gap:16px"><span><span class="k">Model</span><div style="font-size:12.5px;margin-top:2px">${sel.model}</div></span><span><span class="k">Reads</span><div style="font-size:12.5px;margin-top:2px">job folder · library</div></span></div>
+      <div class="k" style="margin-top:9px">Tools</div><div class="tools2"><span class="chip2">Read</span><span class="chip2">Write</span><span class="chip2">Edit</span><span class="chip2 off">Bash</span><span class="chip2 ${sel.status==='refused'?'ask':'off'}">WebFetch</span><span class="chip2 off">Connectors</span></div></div>`;}
+  let teamsHtml='';const lead=ppl.find(p=>p.isLead);
+  if(lead)teamsHtml+=`<div class="team"><div class="th"><span class="k">LEAD</span></div>${prow(lead)}</div>`;
+  for(const t of d.teams){const tp=ppl.filter(p=>p.team===t.name);teamsHtml+=`<div class="team"><div class="th"><span class="k">${t.name.toUpperCase()}</span><span class="n">${tp.length}</span><a class="add">+ Add person</a></div>${tp.map(prow).join('')}</div>`;}
+  const budget=curDept==='business'?[64,180]:curDept==='boss'?[48,120]:[Math.round(d.count*11),Math.round(d.count*15)];
+  right.innerHTML=`<div class="rhead"><div class="t"><span class="sq" style="width:12px;height:12px;background:var(${DEPTCOL[curDept]||'--mil'})"></span><b>${cap(d.name)}</b><button class="btn edit">Edit</button></div>
+    <div class="remit">${d.about}</div>
+    <div class="rstat"><span>${d.count} people</span><span>${d.teams.length} sub-teams</span><span>${dotf('working')}${s.working} working</span>${s.waiting?`<span style="color:#92610e">${dotf('waiting')}${s.waiting} waiting</span>`:''}${s.refused?`<span style="color:#9a2020">${dotf('refused')}${s.refused} refused</span>`:''}</div>
+    <div style="margin-top:9px"><div class="spendrow" style="font-size:12px"><span style="color:var(--muted)">${monthName()} budget</span><b style="font-family:var(--f-mono)">$${budget[0]} / $${budget[1]}</b></div><div class="bar"><i style="width:${Math.round(budget[0]/budget[1]*100)}%;background:${budget[0]/budget[1]>.75?'var(--waiting)':'var(--mil)'}"></i></div></div>
+  </div>${personCard}${teamsHtml}<button class="addteam">+ Add sub-team</button>`;
+  right.querySelectorAll('.prow').forEach(el=>el.onclick=()=>pickWorker(el.dataset.id));
+}
+function prow(p){return `<div class="prow${selected===(p.dept+':'+p.id)?' sel':''}" data-id="${p.dept+':'+p.id}"><span class="dot" style="background:var(--${p.status})"></span><b>${p.name}</b><span class="mdl">${p.model}</span><span class="doing">${p.task||p.role||''}</span></div>`;}
+function groupPanel(){const mds=groupDepts('Military');const mp=groupPeople('Military');const s=statusSummary(mp);const dotf=k=>`<span class="dot" style="background:var(--${k})"></span>`;
+  let rows=mds.map(d=>{const dp=deptPeople(d);const ds=statusSummary(dp);return `<div class="prow" data-key="${d.key}" style="grid-template-columns:12px 1fr auto"><span class="sq" style="width:10px;height:10px;background:var(--mil)"></span><b>${cap(d.name)}</b><span class="mdl">${d.count}</span><span class="doing">${dotf('working')}${ds.working} · ${ds.waiting?dotf('waiting')+ds.waiting+' · ':''}${ds.refused?dotf('refused')+ds.refused+' · ':''}${dotf('idle')}${ds.idle} idle</span></div>`;}).join('');
+  return `<div class="rhead"><div class="t"><span class="sq" style="width:12px;height:12px;background:var(--mil)"></span><b>Military</b><button class="btn edit">Edit</button></div>
+    <div class="remit">A group of eight departments covering the staff branches, intelligence and reconnaissance, cyber and EW, warfare doctrine, logistics, capability and support.</div>
+    <div class="rstat"><span>${mp.length} people</span><span>8 departments</span><span>${dotf('working')}${s.working} working</span><span style="color:#92610e">${dotf('waiting')}${s.waiting} waiting</span><span style="color:#9a2020">${dotf('refused')}${s.refused} refused</span></div></div>
+    <div class="team"><div class="th"><span class="k">Departments</span></div>${rows}</div>`;}
+function officePanel(){return `
+  <div class="rsec"><h3>New job</h3><div class="q">Who should do it?</div>
+    <div class="chips"><span class="pchip on"><span class="sq" style="background:var(--ink)"></span>Boss decides</span><span class="pchip"><span class="sq" style="background:var(--mil)"></span>Military</span><span class="pchip"><span class="sq" style="background:var(--biz)"></span>Business</span></div>
+    <textarea placeholder="e.g. Draft the export-screening memo for the radar documentation"></textarea>
+    <div class="row" style="margin-top:10px"><span class="seg"><button class="on">Whole department</button><button>One person</button></span><button class="send">Send</button></div>
+    <div class="help">The Boss reads each department's remit and hands it to the one that owns it. You'll see where it went and why.</div></div>
+  <div class="rsec"><h3>Needs you <span class="navb">2</span><a style="margin-left:auto;color:var(--accent);font-size:12px;cursor:pointer">All approvals →</a></h3>
+    <div class="card wait"><div class="chead"><span class="ctag signoff">Ready for sign-off</span><span class="sq" style="width:9px;height:9px;border-radius:3px;background:var(--mil)"></span>MILITARY · INTELLIGENCE<span class="when">4 min</span></div>
+      <div class="ctitle">Intelligence estimate for the radar programme</div><div class="cmeta">5 sub-teams · 7.1 KB deliverable · 0 refused · $0.61</div>
+      <div class="cact"><button class="pri">Review &amp; approve</button><button class="sec">Open</button></div></div>
+    <div class="card wait"><div class="chead"><span class="ctag ques">Question</span><span class="sq" style="width:9px;height:9px;border-radius:3px;background:var(--mil)"></span>MILITARY · INTELLIGENCE<span class="when">2 min</span></div>
+      <div class="ctitle">"Use the public datasheet as the source for the supplier spec, or wait?"</div>
+      <div class="cact"><button class="pri">Use public datasheet</button><button class="sec">Wait</button></div></div></div>
+  <div class="rsec"><h3>Running <span class="navb" style="background:var(--working)">2</span></h3>
+    <div class="card"><div class="chead"><span class="ctag work">Working</span><span class="sq" style="width:9px;height:9px;border-radius:3px;background:var(--mil)"></span>MILITARY<span class="when">2 min</span></div>
+      <div class="ctitle">Export-screening memo for the radar docs</div><div class="cmeta">Boss → Military: routed to Intelligence &amp; Support</div>
+      <div class="prog"><div><div class="p">INTEL</div><div class="pb"><i style="width:70%"></i></div></div><div><div class="p">SUPPORT</div><div class="pb"><i style="width:40%"></i></div></div><div><div class="p">CAPAB</div><div class="pb"><i style="width:30%"></i></div></div></div></div>
+    <div class="card"><div class="chead"><span class="ctag work">Working</span><span class="sq" style="width:9px;height:9px;border-radius:3px;background:var(--biz)"></span>BUSINESS<span class="when">1 min</span></div>
+      <div class="ctitle">September invoices vs budget</div><div class="cmeta">You → Business</div>
+      <div class="prog" style="grid-template-columns:repeat(2,1fr)"><div><div class="p">FINANCE</div><div class="pb"><i style="width:55%"></i></div></div><div><div class="p">CONTRACTS</div><div class="pb"><i style="width:20%"></i></div></div></div></div></div>`;}
+function bindOffice(){document.querySelectorAll('#right .pchip').forEach(c=>c.onclick=()=>{document.querySelectorAll('#right .pchip').forEach(x=>x.classList.remove('on'));c.classList.add('on');});
+  document.querySelectorAll('#right .seg button').forEach(b=>b.onclick=()=>{b.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');});}
+
+function render(){
+  document.getElementById('angle').textContent=angle+'°';
+  document.getElementById('motion').classList.toggle('on',motion);document.body.classList.toggle('no-motion',!motion);
+  const bb=document.getElementById('backbar');bb.hidden=level==='office';
+  document.getElementById('floorchip').hidden=level!=='office';
+  document.getElementById('sbadge').hidden=level!=='office';
+  let crumb='Elenta · Main wing';if(level==='group')crumb='Office / Military';if(level==='dept')crumb='Office / '+(DEPT[curDept].group==='Military'?'Military / '+cap(DEPT[curDept].name):cap(DEPT[curDept].name));
+  document.getElementById('crumb').textContent=crumb;
+  if(level!=='office'){document.getElementById('backname').textContent=level==='group'?'MILITARY':cap(DEPT[curDept].name).toUpperCase();
+    document.getElementById('backbtn').textContent=(level==='dept'&&DEPT[curDept].group==='Military')?'← Military':'← Whole office';}
+  renderSidebar();renderPanel();draw();
+}
+document.getElementById('backbtn').onclick=back;
+document.getElementById('rotate').onclick=()=>{angle=(angle+90)%360;draw();};
+document.getElementById('motion').onclick=()=>{motion=!motion;render();};
+document.getElementById('zin').onclick=()=>{zoom=Math.min(3.2,zoom*1.2);draw();};
+document.getElementById('zout').onclick=()=>{zoom=Math.max(.5,zoom/1.2);draw();};
+document.getElementById('fit').onclick=()=>{zoom=1;pan={x:0,y:0};draw();};
+floor.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.5,Math.min(3.2,zoom*(e.deltaY<0?1.1:.9)));draw();},{passive:false});
+floor.addEventListener('pointerdown',e=>{if(e.target.closest('.worker,.room'))return;drag={x:e.clientX,y:e.clientY,moved:false};floor.classList.add('drag');floor.setPointerCapture(e.pointerId);});
+floor.addEventListener('pointermove',e=>{if(!drag)return;if(Math.abs(e.clientX-drag.x)+Math.abs(e.clientY-drag.y)>3)drag.moved=true;pan.x-=(e.clientX-drag.x)/zoom;pan.y-=(e.clientY-drag.y)/zoom;drag.x=e.clientX;drag.y=e.clientY;draw();});
+floor.addEventListener('pointerup',()=>{setTimeout(()=>{drag=null;},0);floor.classList.remove('drag');});
+addEventListener('resize',()=>placeOverlay());
+const root=document.documentElement,tb=document.getElementById('theme');
+try{const s=localStorage.getItem('eo-theme');if(s)root.setAttribute('data-theme',s);}catch{}
+tb.onclick=()=>{const cur=root.getAttribute('data-theme');const dark=cur?cur==='dark':matchMedia('(prefers-color-scheme:dark)').matches;const nx=dark?'light':'dark';root.setAttribute('data-theme',nx);try{localStorage.setItem('eo-theme',nx);}catch{}draw();};
+document.querySelector('.sub').previousElementSibling;
+// fix org header count
+render();
+const oh=document.querySelector('.lcol .eyebrow');if(oh)oh.textContent='Organisation · '+ORG.total+' people';
+window.__state=()=>({level,curGroup,curDept,selected,total:ORG.total});
+window.__go=(lv,k)=>{if(lv==='group')openGroup('Military');else if(lv==='dept')openDept(k);else openOffice();};
+</script>
+
+</body>
+</html>
