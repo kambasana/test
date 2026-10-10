@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Elenta Office</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+:root{
+  --page:#EEF0F3; --panel:#FFFFFF; --ink:#1E2530; --muted:#5B6673; --faint:#97A1AD;
+  --line:#E4E8ED; --line2:#EDF0F3; --sunk:#F4F6F8; --accent:#2F6FED;
+  --cmd:#334155; --mil:#657337; --biz:#6554E8; --lib:#188C86;
+  --cmd-fill:#EDF0F4; --mil-fill:#F1F2E5; --biz-fill:#EEEDF9; --lib-fill:#E9F4F1;
+  --stage:#EEF0F5; --roomstroke-a:1;
+  --working:#14B8A6; --waiting:#F59E0B; --refused:#EF4444; --idle:#9CA3AF;
+  --f-sans:"IBM Plex Sans","Segoe UI",system-ui,sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --page:#0C0F14; --panel:#141A22; --ink:#E7EDF4; --muted:#93A0AF; --faint:#6A7684;
+  --line:#242E3A; --line2:#1C242E; --sunk:#10151C; --accent:#5A8DF2;
+  --cmd:#8695A8; --mil:#A6B265; --biz:#9A8FF0; --lib:#39B3A9;
+  --cmd-fill:#1C232E; --mil-fill:#20241A; --biz-fill:#1E1B2B; --lib-fill:#122621;
+  --stage:#0E131A; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --page:#0C0F14; --panel:#141A22; --ink:#E7EDF4; --muted:#93A0AF; --faint:#6A7684;
+  --line:#242E3A; --line2:#1C242E; --sunk:#10151C; --accent:#5A8DF2;
+  --cmd:#8695A8; --mil:#A6B265; --biz:#9A8FF0; --lib:#39B3A9;
+  --cmd-fill:#1C232E; --mil-fill:#20241A; --biz-fill:#1E1B2B; --lib-fill:#122621;
+  --stage:#0E131A; color-scheme:dark;
+}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--f-sans);font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+.app{display:flex;flex-direction:column;height:100%}
+.top{display:flex;align-items:center;gap:13px;padding:10px 18px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+.logo{display:flex;align-items:center;gap:9px;font-weight:700;letter-spacing:-.01em}
+.logo i{width:20px;height:20px;border-radius:6px;background:var(--ink);position:relative}
+.logo i::after{content:"";position:absolute;inset:5px;border-radius:50%;border:2px solid var(--panel)}
+.sub{color:var(--muted);font-size:12.5px}
+.sbadge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--mil);background:color-mix(in srgb,var(--working) 14%,transparent);border:1px solid color-mix(in srgb,var(--working) 34%,transparent);padding:3px 9px;border-radius:999px}
+.sbadge i{width:7px;height:7px;border-radius:50%;background:var(--working)}
+.nav{margin-left:auto;display:flex;align-items:center;gap:3px}
+.nav a{font-size:13px;color:var(--muted);padding:6px 9px;border-radius:8px;cursor:pointer;white-space:nowrap}
+.nav a.on{color:var(--ink);background:var(--sunk);font-weight:600}
+.nav a:hover{color:var(--ink)}
+.navb{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;padding:0 4px;border-radius:999px;background:var(--waiting);color:#fff;font-size:11px;font-weight:700;margin-left:5px}
+.tbtn{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:8px;width:32px;height:30px;cursor:pointer;font-size:14px}
+.tbtn:hover{color:var(--ink)}
+.kbd{border:1px solid var(--line);border-radius:7px;padding:4px 7px;color:var(--muted);font-size:12px}
+.main{flex:1;display:grid;grid-template-columns:232px 1fr 360px;min-height:0}
+@media (max-width:1120px){.main{grid-template-columns:200px 1fr}.rcol{display:none}}
+@media (max-width:720px){.main{grid-template-columns:1fr}.lcol{display:none}}
+.col{min-height:0;overflow:auto}
+.lcol{border-right:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
+.rcol{border-left:1px solid var(--line);background:var(--panel)}
+.eyebrow{font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.deptcard{display:block;width:100%;text-align:left;border:none;background:none;cursor:pointer;padding:11px 16px;border-bottom:1px solid var(--line2);font-family:inherit}
+.deptcard:hover,.deptcard.on{background:var(--sunk)}
+.dc-top{display:flex;align-items:center;gap:8px}
+.sq{width:11px;height:11px;border-radius:3px;flex:0 0 auto}
+.dc-name{font-weight:600}
+.dc-count{margin-left:auto;color:var(--faint);font:600 12px/1 var(--f-mono)}
+.dc-sub{color:var(--muted);font-size:12px;margin:3px 0 0 19px}
+.dc-stat{display:flex;gap:12px;margin:6px 0 0 19px;font-size:12px}
+.dc-stat span{display:inline-flex;align-items:center;gap:5px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.budget{margin-top:auto;border-top:1px solid var(--line);padding:14px 16px}
+.bar{height:7px;border-radius:999px;background:var(--sunk);overflow:hidden;margin-top:7px}
+.bar>i{display:block;height:100%;border-radius:999px;background:var(--mil)}
+.spendrow{display:flex;justify-content:space-between;align-items:baseline}
+.spendrow b{font-family:var(--f-mono)}
+/* stage */
+.stagewrap{position:relative;overflow:hidden;background:var(--stage)}
+#floor{display:block;width:100%;height:100%;cursor:grab;touch-action:none}
+#floor.drag{cursor:grabbing}
+.chip{position:absolute;display:inline-flex;align-items:center;gap:8px;background:color-mix(in srgb,var(--panel) 86%,transparent);border:1px solid var(--line);
+  border-radius:999px;padding:5px 11px;font-size:12px;color:var(--muted);backdrop-filter:blur(4px)}
+.chip .lead{font:600 11px/1 var(--f-mono);letter-spacing:.06em;color:var(--ink)}
+.tl{left:14px;top:12px}
+.tools{position:absolute;right:14px;top:12px;display:flex;gap:6px}
+.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.btn:hover{border-color:var(--faint)}
+.btn.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.zoom{position:absolute;right:14px;bottom:12px;display:flex;gap:6px}
+.zoom .btn{width:34px;height:30px;padding:0;font-size:15px}
+.zoom .fit{width:auto;padding:0 12px;font-size:12.5px}
+.legend{position:absolute;left:14px;bottom:12px;display:flex;gap:11px;flex-wrap:wrap;background:color-mix(in srgb,var(--panel) 88%,transparent);
+  border:1px solid var(--line);padding:7px 11px;border-radius:10px;font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px;color:var(--muted)}
+.back{position:absolute;left:14px;top:12px;display:flex;align-items:center;gap:8px}
+.room{cursor:pointer}
+.room:hover{filter:brightness(.98)}
+.worker{cursor:pointer}
+.worker:hover{filter:drop-shadow(0 1px 3px rgba(20,25,35,.3))}
+.worker:focus{outline:none}
+.worker.sel{filter:drop-shadow(0 0 0 rgba(0,0,0,0))}
+.bubble{animation:pulse 1.6s ease-in-out infinite}
+.no-motion .bubble{animation:none}
+@keyframes pulse{50%{opacity:.4}}
+@media(prefers-reduced-motion:reduce){.bubble{animation:none}}
+/* right panel */
+.rsec{padding:14px 16px;border-bottom:1px solid var(--line)}
+.rsec h3{margin:0 0 9px;font:600 11px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);display:flex;align-items:center;gap:8px}
+.q{font-weight:600;margin-bottom:8px}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:9px}
+.pchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:12.5px;cursor:pointer;background:var(--panel);color:var(--ink);font-family:inherit}
+.pchip.on{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.pchip .sq{width:9px;height:9px;border-radius:3px}
+textarea{width:100%;min-height:62px;border:1px solid var(--line);border-radius:10px;padding:9px 11px;font:inherit;font-size:13px;color:var(--ink);background:var(--panel);resize:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:none;background:var(--panel);color:var(--muted);padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.seg button.on{background:var(--sunk);color:var(--ink);font-weight:600}
+.send{margin-left:auto;background:var(--lib);color:#fff;border:none;border-radius:9px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit}
+.row{display:flex;align-items:center;gap:10px}
+.help{color:var(--muted);font-size:12px;margin-top:8px}
+.card{border:1px solid var(--line);border-radius:12px;padding:11px 12px;margin-top:10px}
+.card.wait{background:color-mix(in srgb,var(--waiting) 7%,var(--panel));border-color:color-mix(in srgb,var(--waiting) 28%,var(--line))}
+.ctag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px}
+.ctag.signoff,.ctag.ques{color:#8a5a00;background:color-mix(in srgb,var(--waiting) 18%,transparent)}
+.ctag.work{color:#0c7566;background:color-mix(in srgb,var(--working) 16%,transparent)}
+.chead{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--muted)}
+.chead .when{margin-left:auto}
+.ctitle{font-weight:600;margin:7px 0 4px}
+.cmeta{color:var(--muted);font-size:12px}
+.cact{display:flex;gap:8px;margin-top:10px}
+.cact .pri{background:var(--lib);color:#fff;border:none;border-radius:8px;padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit}
+.cact .sec{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:12.5px;cursor:pointer;font-family:inherit}
+.prog{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:9px}
+.prog .p{font:600 9.5px/1 var(--f-mono);letter-spacing:.05em;color:var(--faint)}
+.prog .pb{height:5px;border-radius:999px;background:var(--sunk);margin-top:4px;overflow:hidden}
+.prog .pb>i{display:block;height:100%;background:var(--working)}
+.rhead{padding:14px 16px;border-bottom:1px solid var(--line)}
+.rhead .t{display:flex;align-items:center;gap:8px}
+.rhead .t b{font-size:17px}
+.rhead .edit{margin-left:auto}
+.remit{color:var(--muted);font-size:12.5px;margin-top:6px}
+.rstat{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;margin-top:8px;color:var(--muted)}
+.rstat span{display:inline-flex;align-items:center;gap:5px}
+.team{padding:11px 16px;border-bottom:1px solid var(--line2)}
+.team .th{display:flex;align-items:center;gap:8px}
+.team .th .k{font:600 10.5px/1 var(--f-mono);letter-spacing:.06em;color:var(--muted)}
+.team .th .n{color:var(--faint);font:600 11px/1 var(--f-mono)}
+.team .add{margin-left:auto;color:var(--accent);font-size:12px;cursor:pointer}
+.prow{display:grid;grid-template-columns:10px 1fr auto;gap:3px 9px;align-items:center;margin-top:8px;padding:6px 8px;border-radius:8px;cursor:pointer}
+.prow:hover{background:var(--sunk)}
+.prow.sel{background:color-mix(in srgb,var(--accent) 10%,transparent);outline:1px solid color-mix(in srgb,var(--accent) 35%,transparent)}
+.prow b{font-size:12.5px}
+.prow .mdl{font:11px/1 var(--f-mono);color:var(--muted);border:1px solid var(--line);border-radius:6px;padding:3px 6px}
+.prow .doing{grid-column:2/4;color:var(--muted);font-size:12px}
+.addteam{margin:12px 16px;width:calc(100% - 32px);border:1px dashed var(--line);background:var(--panel);color:var(--muted);border-radius:10px;padding:9px;font-size:13px;cursor:pointer;font-family:inherit}
+.pcard{padding:14px 16px;border-bottom:1px solid var(--line)}
+.pill{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;padding:3px 9px;border-radius:999px;border:1px solid transparent}
+.pill .dot{width:8px;height:8px}
+.pill.working{color:#0c7566;background:color-mix(in srgb,var(--working) 16%,transparent);border-color:color-mix(in srgb,var(--working) 36%,transparent)}
+.pill.waiting{color:#8a5a00;background:color-mix(in srgb,var(--waiting) 18%,transparent);border-color:color-mix(in srgb,var(--waiting) 40%,transparent)}
+.pill.refused{color:#a51f1f;background:color-mix(in srgb,var(--refused) 16%,transparent);border-color:color-mix(in srgb,var(--refused) 38%,transparent)}
+.pill.idle{color:var(--muted);background:var(--sunk);border-color:var(--line)}
+:root[data-theme="dark"] .pill.working{color:#4ad8c8}:root[data-theme="dark"] .pill.waiting{color:#f2b65a}:root[data-theme="dark"] .pill.refused{color:#f58080}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .pill.working{color:#4ad8c8}:root:not([data-theme="light"]) .pill.waiting{color:#f2b65a}:root:not([data-theme="light"]) .pill.refused{color:#f58080}}
+.k{font:600 11px/1 var(--f-mono);letter-spacing:.07em;text-transform:uppercase;color:var(--faint)}
+.scr{width:100%;border:1px solid var(--line);border-radius:10px;background:var(--sunk);margin-top:6px}
+.tools2{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip2{font:12px/1 var(--f-mono);padding:4px 8px;border-radius:7px;border:1px solid var(--line);background:var(--sunk);color:var(--muted)}
+.chip2.off{text-decoration:line-through;opacity:.7}
+.chip2.ask{border-color:color-mix(in srgb,var(--waiting) 50%,var(--line));color:var(--waiting)}
+.demo{position:absolute;left:50%;transform:translateX(-50%);bottom:12px;font-size:11px;color:var(--faint)}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <span class="logo"><i></i>Elenta Office</span>
+    <span class="sub" id="crumb">Elenta · Main wing</span>
+    <span class="sbadge" id="sbadge"><i></i>Sandbox · locked down</span>
+    <nav class="nav">
+      <a class="on">Office</a><a>Jobs</a><a>Approvals <span class="navb">2</span></a><a>Connectors</a><a>Budgets</a><a>Audit</a><a>Org</a>
+    </nav>
+    <button class="tbtn" id="theme" aria-label="Toggle light or dark theme">◐</button>
+    <span class="kbd">⌘K</span>
+  </div>
+  <div class="main">
+    <div class="col lcol">
+      <div style="padding:14px 16px;border-bottom:1px solid var(--line2)"><span class="eyebrow">Organisation · 17 people</span></div>
+      <div id="orglist"></div>
+      <div class="budget">
+        <span class="eyebrow">This month</span>
+        <div class="spendrow" style="margin-top:8px"><span style="color:var(--muted)">Spend</span><b>$184 / $600</b></div>
+        <div class="bar"><i style="width:31%"></i></div>
+        <div style="color:var(--muted);font-size:12px;margin-top:7px">Military 62% of its budget</div>
+      </div>
+    </div>
+    <div class="col stagewrap" id="stage">
+      <svg id="floor" xmlns="http://www.w3.org/2000/svg" aria-label="Interactive office floor"></svg>
+      <div class="chip tl" id="floorchip"><span class="lead">FLOOR</span>Drag to pan · scroll to zoom · click a room</div>
+      <div class="back" id="backbar" hidden><button class="btn" id="backbtn">← Whole office</button><span class="chip" style="position:static"><span class="lead" id="backname">MILITARY</span></span></div>
+      <div class="tools" id="tools">
+        <button class="btn" id="rotate" aria-label="Rotate 90 degrees">↻ <span id="angle">0°</span></button>
+        <button class="btn" id="motion">Activity</button>
+      </div>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--working)"></i>Working</span>
+        <span><i class="dot" style="background:var(--waiting)"></i>Waiting for you</span>
+        <span><i class="dot" style="background:var(--refused)"></i>Refused / stopped</span>
+        <span><i class="dot" style="background:var(--idle)"></i>Idle</span>
+      </div>
+      <div class="zoom"><button class="btn" id="zout">−</button><button class="btn" id="zin">+</button><button class="btn fit" id="fit">Fit</button></div>
+      <div class="demo">Illustrative floor · sample agent state</div>
+    </div>
+    <div class="col rcol" id="right"></div>
+  </div>
+</div>
+<script>
+const NS='http://www.w3.org/2000/svg';
+const C={working:'#14B8A6',waiting:'#F59E0B',refused:'#EF4444',idle:'#9CA3AF'};
+const D={
+  business:{name:'Business',key:'biz',x:0,y:0,w:7,h:5,remit:'Runs money, agreements and office administration.',sub:'Finance · Contracts · Admin',budget:[64,180]},
+  library:{name:'Library',key:'lib',x:7.5,y:0,w:5,h:5,remit:'Shared notes and lessons. No assigned workers.',sub:'Notes · lessons',budget:[0,0]},
+  command:{name:'Command',key:'cmd',x:0,y:5.5,w:5,h:6,remit:'Reads each request, decides which department owns it and hands it over.',sub:'Boss · Chief of staff',budget:[48,120]},
+  military:{name:'Military',key:'mil',x:5.5,y:5.5,w:9,h:7,remit:'Owns all military-domain work: software, documents, analysis and compliance.',sub:'Software · Documentation · Analysis · Compliance',budget:[372,465]}
+};
+const fillVar={business:'--biz-fill',library:'--lib-fill',command:'--cmd-fill',military:'--mil-fill'};
+const colVar={business:'--biz',library:'--lib',command:'--cmd',military:'--mil'};
+const people=[],teams={};
+function add(id,name,dept,team,asset,status,task,model,role){people.push({id,name,dept,team,asset,status,task,model,role});(teams[team]??=[]).push(id)}
+add('boss','BOSS','command','Leadership','business-finance','working','Routing the radar request','Opus','Head of the office');
+add('chief','CHIEF OF STAFF','command','Leadership','business-documents','idle','Ready for the next briefing','Sonnet','Keeps the queue moving');
+add('business-lead','BUSINESS LEAD','business','Business lead','business-finance','working','Combining the monthly report','Opus','Runs the business department');
+add('finance-1','ACCOUNTANT','business','Finance','business-finance','working','Checking invoices against budget','Sonnet','Bookkeeping and invoices');
+add('finance-2','FINANCE ANALYST','business','Finance','business-documents','idle','Ready for the next reconciliation','Sonnet','Forecasts');
+add('contracts','CONTRACTS OFFICER','business','Contracts','business-documents','idle','Contract review complete','Sonnet','Agreements and terms');
+add('admin','OFFICE MANAGER','business','Admin','business-documents','idle','Records up to date','Sonnet','Records and logistics');
+add('military-lead','MILITARY LEAD','military','Military lead','military-lead','working','Combining the export memo','Opus','Programme lead');
+add('software-lead','SOFTWARE LEAD','military','Software','military-software','working','Reviewing the data-logging module','Sonnet','Leads the software sub-team');
+add('software-engineer','SOFTWARE ENGINEER','military','Software','military-software','working','Parser for the test data','Sonnet','Embedded and tooling code');
+add('test-engineer','TEST ENGINEER','military','Software','military-testing','idle','Idle','Sonnet','Verification');
+add('technical-writer','TECHNICAL WRITER','military','Documentation','military-documentation','working','Drafting the export memo','Sonnet','Manuals and plans');
+add('configuration-manager','CONFIGURATION MANAGER','military','Documentation','military-documentation','waiting','Waiting for your OK on v1.2','Sonnet','Document control');
+add('requirements-analyst','REQUIREMENTS ANALYST','military','Analysis','military-analysis','working','Tracing 12 requirements','Sonnet','Requirements and traceability');
+add('systems-analyst','SYSTEMS ANALYST','military','Analysis','military-analysis','idle','Idle','Haiku','Whole-system view');
+add('export-control-officer','EXPORT CONTROL OFFICER','military','Compliance','military-compliance','refused','Refused: web fetch (not allowed)','Sonnet','Export screening');
+add('qa','QA','military','Compliance','military-compliance','working','Reviewing the memo','Sonnet','Quality checks');
+const spots={'Leadership':[1,7],'Business lead':[3.6,3.7],Finance:[1,1.9],Contracts:[4.8,1.9],Admin:[1,3.8],'Military lead':[7,11.3],Software:[7,7],Analysis:[7,9.2],Documentation:[11,9.2],Compliance:[11,11.3]};
+const screenType={Software:'software',Documentation:'documentation',Analysis:'analysis',Compliance:'compliance',Testing:'testing',Finance:'summary',Contracts:'summary',Admin:'summary',Leadership:'summary','Business lead':'summary','Military lead':'summary'};
+
+let mode='office', dept='military', selected=null, angle=0, motion=!matchMedia('(prefers-reduced-motion: reduce)').matches, filter='all', zoom=1, pan={x:0,y:0}, drag=null;
+const floor=document.getElementById('floor');
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function node(tag,attrs={},parent=floor){let n=document.createElementNS(NS,tag);for(const k in attrs)n.setAttribute(k,attrs[k]);parent.append(n);return n}
+function text(label,x,y,parent,size){let n=node('text',{x,y,'font-size':size||12,'font-family':'IBM Plex Sans, system-ui',fill:cssv('--ink'),'text-anchor':'middle','font-weight':600},parent);n.textContent=label;return n}
+function pos(x,y){let a=angle*Math.PI/180,xx=(x-7)*Math.cos(a)-(y-6)*Math.sin(a),yy=(x-7)*Math.sin(a)+(y-6)*Math.cos(a);return {x:(xx-yy)*46,y:(xx+yy)*23}}
+function coordinates(p){let s=spots[p.team],i=teams[p.team].indexOf(p.id);return {x:s[0]+i*1.4,y:s[1]}}
+function peopleOf(k){return people.filter(p=>p.dept===k)}
+function cnt(k,s){return peopleOf(k).filter(p=>p.status===s).length}
+
+function room(k){let r=D[k];let g=node('g',{class:'room','data-dept':k,tabindex:0,role:'button','aria-label':'Open '+r.name});
+  let pts=[[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]].map(a=>pos(...a));
+  node('polygon',{points:pts.map(p=>p.x+','+p.y).join(' '),fill:cssv(fillVar[k]),stroke:cssv(colVar[k]),'stroke-width':3,'stroke-opacity':.9},g);
+  if(k==='library'){let p=pos(r.x+2.5,r.y+2.7);node('image',{href:'furniture/bookshelf.png',x:p.x-65,y:p.y-110,width:130,height:140},g);}
+  g.onclick=()=>openDept(k);g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openDept(k);}}
+}
+function draw(){
+  floor.replaceChildren();
+  const vis = mode==='office' ? Object.keys(D) : [dept];
+  vis.forEach(room);
+  const drawn = people.filter(p=>vis.includes(p.dept)).filter(p=>filter==='all'||p.status===filter)
+    .map(p=>({p,...pos(coordinates(p).x,coordinates(p).y)})).sort((a,b)=>a.y-b.y);
+  for(const a of drawn){const p=a.p;
+    const g=node('g',{class:'worker'+(selected===p.id?' sel':''),tabindex:0,role:'button','data-person':p.id,'aria-label':p.name+', '+p.status});
+    node('ellipse',{cx:a.x-18,cy:a.y+3,rx:selected===p.id?28:25,ry:selected===p.id?14:12,fill:'none',stroke:C[p.status],'stroke-width':selected===p.id?4:3},g);
+    const src = (p.dept==='military'&&angle!==0) ? 'directions/occupied-angle-'+(angle/90)+'.png' : 'workstations/'+p.asset+'.png';
+    node('image',{href:src,x:a.x-57,y:a.y-105,width:114,height:112},g);
+    if(p.status==='waiting'||p.status==='refused')node('image',{href:'vector/marker-'+(p.status==='waiting'?'question':'stop')+'.svg',x:a.x-15,y:a.y-132,width:35,height:26},g);
+    else if(p.status==='working'&&motion)node('image',{href:'vector/marker-typing.svg',x:a.x-13,y:a.y-127,width:26,height:22,class:'bubble'},g);
+    g.onclick=e=>{e.stopPropagation();pickWorker(p.id);};g.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();pickWorker(p.id);}}
+  }
+  // team labels as HTML overlay (crisp)
+  overlayLabels(vis);
+  let box=floor.getBBox();let w=box.width+90,h=box.height+100;
+  floor.setAttribute('viewBox',`${box.x-45+pan.x} ${box.y-55+pan.y} ${w/zoom} ${h/zoom}`);
+  floor.setAttribute('preserveAspectRatio','xMidYMid meet');
+  placeOverlay();
+}
+// HTML overlay labels for rooms + teams (sharp, never clipped)
+let labels=[];
+function overlayLabels(vis){labels=[];
+  for(const k of vis){const r=D[k];labels.push({x:r.x+r.w/2,y:r.y+0.1,kind:'room',k});}
+  for(const [t,ids] of Object.entries(teams)){const p=people.find(x=>x.id===ids[0]);if(!vis.includes(p.dept))continue;const s=spots[t];labels.push({x:s[0]+0.7,y:s[1]-0.1,kind:'team',t,n:ids.length,lead:/lead/i.test(t)});}
+}
+const ov=document.createElement('div');ov.style.cssText='position:absolute;inset:0;pointer-events:none';document.getElementById('stage').appendChild(ov);
+function svgClient(sx,sy){const m=floor.getScreenCTM();const q=floor.createSVGPoint();q.x=sx;q.y=sy;const r=q.matrixTransform(m);const b=document.getElementById('stage').getBoundingClientRect();return {x:r.x-b.left,y:r.y-b.top};}
+function placeOverlay(){ov.innerHTML='';for(const L of labels){const c=pos(L.x,L.y);const pt=svgClient(c.x,c.y);const d=document.createElement('div');
+  d.style.cssText=`position:absolute;left:${pt.x}px;top:${pt.y}px;transform:translate(-50%,-115%);white-space:nowrap`;
+  if(L.kind==='room'){const r=D[L.k];d.innerHTML=`<div style="background:var(--panel);border:1px solid var(--line);border-radius:9px;padding:5px 9px;box-shadow:0 4px 12px rgba(20,25,35,.1)">
+     <div style="display:flex;align-items:center;gap:7px;font:600 12px/1 var(--f-sans)"><span style="width:10px;height:10px;border-radius:3px;background:var(${colVar[L.k]})"></span>${r.name.toUpperCase()}</div>
+     <div style="font:500 11px/1 var(--f-sans);color:var(--muted);margin-top:4px">${L.k==='library'?'10 notes · lessons':peopleOf(L.k).length+' people · '+subteamCount(L.k)+' sub-teams'}</div></div>`;}
+  else{d.innerHTML=`<div style="background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px 9px;box-shadow:0 3px 10px rgba(20,25,35,.1);font:600 10.5px/1 var(--f-mono);letter-spacing:.04em;display:flex;align-items:center;gap:7px">
+     ${L.lead?'<span style="color:var(--waiting)">★</span>':''}${L.t.toUpperCase()} <span style="color:var(--faint)">${L.n}</span></div>`;}
+  ov.appendChild(d);}
+}
+function subteamCount(k){const ts=new Set(peopleOf(k).map(p=>p.team).filter(t=>!/lead|leadership/i.test(t)));return Math.max(ts.size,1);}
+
+/* ---- interactions ---- */
+function openDept(k){if(k==='library'){toast('Library has no assigned workers');return;}mode='dept';dept=k;selected=null;zoom=1;pan={x:0,y:0};render();}
+function openOffice(){mode='office';selected=null;zoom=1;pan={x:0,y:0};render();}
+function pickWorker(id){const p=people.find(x=>x.id===id);selected=id;if(mode==='office'){mode='dept';dept=p.dept;}render();}
+function toast(s){let t=document.getElementById('toastEl');if(!t){t=document.createElement('div');t.id='toastEl';t.style.cssText='position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--panel);padding:10px 14px;border-radius:10px;z-index:20;font-size:13px';document.body.appendChild(t);}t.textContent=s;t.style.display='block';clearTimeout(t._t);t._t=setTimeout(()=>t.style.display='none',2200);}
+
+/* ---- sidebar + right panel ---- */
+function renderSidebar(){const ol=document.getElementById('orglist');ol.innerHTML='';
+  for(const k of ['command','military','business']){const r=D[k];const b=document.createElement('button');b.className='deptcard'+(mode==='dept'&&dept===k?' on':'');
+    b.innerHTML=`<div class="dc-top"><span class="sq" style="background:var(${colVar[k]})"></span><span class="dc-name">${r.name.toUpperCase()}</span><span class="dc-count">${peopleOf(k).length}</span></div>
+      <div class="dc-sub">${r.sub}</div>
+      <div class="dc-stat"><span><span class="dot" style="background:var(--working)"></span>${cnt(k,'working')} working</span><span style="color:#92610e"><span class="dot" style="background:var(--waiting)"></span>${cnt(k,'waiting')} waiting</span></div>`;
+    b.onclick=()=>openDept(k);ol.appendChild(b);}
+}
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1).toLowerCase();
+const monthName=()=>["January","February","March","April","May","June","July","August","September","October","November","December"][new Date().getMonth()];
+function renderPanel(){const right=document.getElementById('right');
+  if(mode==='office'){right.innerHTML=officePanel();bindOffice();return;}
+  const r=D[dept];const w=cnt(dept,'working'),wa=cnt(dept,'waiting'),rf=cnt(dept,'refused');const dotf=s=>`<span class="dot" style="background:var(--${s})"></span>`;
+  const sel=selected?people.find(p=>p.id===selected):null;
+  let personCard='';
+  if(sel){const st={working:'Working',waiting:'Waiting for you',refused:'Refused / stopped',idle:'Idle'}[sel.status];
+    personCard=`<div class="pcard">
+      <div class="row" style="gap:9px"><span class="pill ${sel.status}"><span class="dot"></span>${st}</span><span class="k">${sel.team.toUpperCase()}</span></div>
+      <div style="font-size:17px;font-weight:600;margin-top:7px">${sel.name}</div>
+      <div style="color:var(--muted);font-size:12.5px">${sel.role}</div>
+      <div class="k" style="margin-top:11px">Doing now</div><div style="font-size:13px;margin-top:3px">${sel.task}</div>
+      <img class="scr" src="vector/screen-${screenType[sel.team]||'summary'}.svg" alt="Illustrative ${screenType[sel.team]||'summary'} screen" style="max-height:120px;object-fit:contain">
+      <div class="row" style="margin-top:9px;gap:16px"><span><span class="k">Model</span><div style="font-size:12.5px;margin-top:2px">${sel.model}</div></span><span><span class="k">Reads</span><div style="font-size:12.5px;margin-top:2px">job folder · library</div></span></div>
+      <div class="k" style="margin-top:9px">Tools</div><div class="tools2"><span class="chip2">Read</span><span class="chip2">Write</span><span class="chip2">Edit</span><span class="chip2 off">Bash</span><span class="chip2 ${sel.id==='export-control-officer'?'ask':'off'}">WebFetch</span><span class="chip2 off">Connectors</span></div>
+    </div>`;}
+  let teamsHtml='';const lead=peopleOf(dept).find(p=>/lead/i.test(p.team));
+  if(lead)teamsHtml+=`<div class="team"><div class="th"><span class="k">LEAD</span></div>${prow(lead)}</div>`;
+  const subteams=[...new Set(peopleOf(dept).map(p=>p.team).filter(t=>!/lead/i.test(t)))];
+  for(const t of subteams){const ppl=peopleOf(dept).filter(p=>p.team===t);
+    teamsHtml+=`<div class="team"><div class="th"><span class="k">${t.toUpperCase()}</span><span class="n">${ppl.length}</span><a class="add">+ Add person</a></div>${ppl.map(prow).join('')}</div>`;}
+  right.innerHTML=`<div class="rhead">
+    <div class="t"><span class="sq" style="width:12px;height:12px;background:var(${colVar[dept]})"></span><b>${r.name}</b><button class="btn edit">Edit</button></div>
+    <div class="remit">${r.remit}</div>
+    <div class="rstat"><span>${peopleOf(dept).length} people</span><span>${subteamCount(dept)} sub-teams</span><span>${dotf('working')}${w} working</span>${wa?`<span style="color:#92610e">${dotf('waiting')}${wa} waiting</span>`:''}${rf?`<span style="color:#9a2020">${dotf('refused')}${rf} refused</span>`:''}</div>
+    ${r.budget[1]?`<div style="margin-top:9px"><div class="spendrow" style="font-size:12px"><span style="color:var(--muted)">${monthName()} budget</span><b style="font-family:var(--f-mono)">$${r.budget[0]} / $${r.budget[1]}</b></div><div class="bar"><i style="width:${Math.round(r.budget[0]/r.budget[1]*100)}%;background:${r.budget[0]/r.budget[1]>.75?'var(--waiting)':'var(--mil)'}"></i></div></div>`:''}
+  </div>${personCard}${teamsHtml}<button class="addteam">+ Add sub-team</button>`;
+  right.querySelectorAll('.prow').forEach(el=>el.onclick=()=>pickWorker(el.dataset.id));
+}
+function prow(p){const dotf=`<span class="dot" style="background:var(--${p.status})"></span>`;
+  return `<div class="prow${selected===p.id?' sel':''}" data-id="${p.id}">${dotf}<b>${p.name}</b><span class="mdl">${p.model}</span><span class="doing">${p.task}</span></div>`;}
+function officePanel(){return `
+  <div class="rsec"><h3>New job</h3><div class="q">Who should do it?</div>
+    <div class="chips"><span class="pchip on"><span class="sq" style="background:var(--ink)"></span>Boss decides</span><span class="pchip"><span class="sq" style="background:var(--mil)"></span>Military</span><span class="pchip"><span class="sq" style="background:var(--biz)"></span>Business</span></div>
+    <textarea placeholder="e.g. Draft the export-screening memo for the radar documentation"></textarea>
+    <div class="row" style="margin-top:10px"><span class="seg"><button class="on">Whole department</button><button>One person</button></span><button class="send">Send</button></div>
+    <div class="help">The Boss reads each department's remit and hands it to the one that owns it. You'll see where it went and why.</div></div>
+  <div class="rsec"><h3>Needs you <span class="navb">2</span><a style="margin-left:auto;color:var(--accent);font-size:12px;cursor:pointer">All approvals →</a></h3>
+    <div class="card wait"><div class="chead"><span class="ctag signoff">Ready for sign-off</span><span class="sq" style="width:9px;height:9px;border-radius:3px;background:var(--mil)"></span>MILITARY<span class="when">4 min</span></div>
+      <div class="ctitle">Test plan for the data-logger software</div><div class="cmeta">4 sub-teams · 6.3 KB deliverable · 0 refused · $0.42</div>
+      <div class="cact"><button class="pri">Review &amp; approve</button><button class="sec">Open</button></div></div>
+    <div class="card wait"><div class="chead"><span class="ctag ques">Question</span><span class="sq" style="width:9px;height:9px;border-radius:3px;background:var(--mil)"></span>MILITARY · COMPLIANCE<span class="when">2 min</span></div>
+      <div class="ctitle">"The memo cites a supplier spec we don't have. Use the public datasheet, or wait?"</div>
+      <div class="cact"><button class="pri">Use public datasheet</button><button class="sec">Wait</button></div></div></div>
+  <div class="rsec"><h3>Running <span class="navb" style="background:var(--working)">2</span></h3>
+    <div class="card"><div class="chead"><span class="ctag work">Working</span><span class="sq" style="width:9px;height:9px;border-radius:3px;background:var(--mil)"></span>MILITARY<span class="when">2 min</span></div>
+      <div class="ctitle">Export-screening memo for the radar docs</div><div class="cmeta">Boss → Military: "export screening is a military compliance task"</div>
+      <div class="prog"><div><div class="p">DOCS</div><div class="pb"><i style="width:80%"></i></div></div><div><div class="p">COMPL</div><div class="pb"><i style="width:35%"></i></div></div><div><div class="p">ANALYSIS</div><div class="pb"><i style="width:60%"></i></div></div></div></div>
+    <div class="card"><div class="chead"><span class="ctag work">Working</span><span class="sq" style="width:9px;height:9px;border-radius:3px;background:var(--biz)"></span>BUSINESS<span class="when">1 min</span></div>
+      <div class="ctitle">September invoices vs budget</div><div class="cmeta">You → Business</div>
+      <div class="prog" style="grid-template-columns:repeat(2,1fr)"><div><div class="p">FINANCE</div><div class="pb"><i style="width:55%"></i></div></div><div><div class="p">CONTRACTS</div><div class="pb"><i style="width:20%"></i></div></div></div></div></div>`;}
+function bindOffice(){document.querySelectorAll('#right .pchip').forEach(c=>c.onclick=()=>{document.querySelectorAll('#right .pchip').forEach(x=>x.classList.remove('on'));c.classList.add('on');});
+  document.querySelectorAll('#right .seg button').forEach(b=>b.onclick=()=>{b.parentNode.querySelectorAll('button').forEach(x=>x.classList.remove('on'));b.classList.add('on');});}
+
+function render(){
+  document.getElementById('angle').textContent=angle+'°';
+  document.getElementById('motion').classList.toggle('on',motion);document.body.classList.toggle('no-motion',!motion);
+  document.getElementById('backbar').hidden=mode==='office';
+  document.getElementById('floorchip').hidden=mode!=='office';
+  document.getElementById('sbadge').hidden=mode!=='office';
+  document.getElementById('crumb').textContent=mode==='office'?'Elenta · Main wing':'Office / '+D[dept].name;
+  if(mode==='dept')document.getElementById('backname').textContent=D[dept].name.toUpperCase();
+  renderSidebar();renderPanel();draw();
+}
+
+/* ---- controls ---- */
+document.getElementById('backbtn').onclick=openOffice;
+document.getElementById('rotate').onclick=()=>{angle=(angle+90)%360;draw();};
+document.getElementById('motion').onclick=()=>{motion=!motion;render();};
+document.getElementById('zin').onclick=()=>{zoom=Math.min(3.2,zoom*1.2);draw();};
+document.getElementById('zout').onclick=()=>{zoom=Math.max(.6,zoom/1.2);draw();};
+document.getElementById('fit').onclick=()=>{zoom=1;pan={x:0,y:0};draw();};
+floor.addEventListener('wheel',e=>{e.preventDefault();zoom=Math.max(.6,Math.min(3.2,zoom*(e.deltaY<0?1.1:.9)));draw();},{passive:false});
+floor.addEventListener('pointerdown',e=>{if(e.target.closest('.worker,.room'))return;drag={x:e.clientX,y:e.clientY};floor.classList.add('drag');floor.setPointerCapture(e.pointerId);});
+floor.addEventListener('pointermove',e=>{if(!drag)return;pan.x-=(e.clientX-drag.x)/zoom;pan.y-=(e.clientY-drag.y)/zoom;drag={x:e.clientX,y:e.clientY};draw();});
+floor.addEventListener('pointerup',()=>{drag=null;floor.classList.remove('drag');});
+addEventListener('resize',()=>placeOverlay());
+const root=document.documentElement,tb=document.getElementById('theme');
+try{const s=localStorage.getItem('eo-theme');if(s)root.setAttribute('data-theme',s);}catch{}
+tb.onclick=()=>{const cur=root.getAttribute('data-theme');const dark=cur?cur==='dark':matchMedia('(prefers-color-scheme:dark)').matches;const nx=dark?'light':'dark';root.setAttribute('data-theme',nx);try{localStorage.setItem('eo-theme',nx);}catch{}draw();};
+render();
+window.__state=()=>({mode,dept,selected,angle,count:people.length});
+window.__openDept=openDept;window.__pick=pickWorker;
+</script>
+</body>
+</html>
